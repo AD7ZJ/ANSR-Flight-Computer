@@ -1,0 +1,33 @@
+###########################################################################
+#                                                                         #
+#                              ESS, Inc.                                  #
+#                                                                         #
+#    ESS, Inc. CONFIDENTIAL AND PROPRIETARY.  This source is the sole     #
+#    property of ESS, Inc.  Reproduction or utilization of this source    #
+#    in whole or in part is forbidden without the written consent of      #
+#    ESS, Inc.                                                            #
+#                                                                         #
+###########################################################################
+#                                                                         #
+#            (c) Copyright 1997-2009 -- All Rights Reserved               #
+#                                                                         #
+###########################################################################
+#                                                                         #
+# Filename:     stm32_flash.script                                        #
+#                                                                         #
+# Description:  script called from openocd-ftd2xx configuration file      #
+#               that controls the JTAG hardware                           #
+#                                                                         #
+# History:      v 1.0 - Initial release                                   #
+#                                                                         #
+#               v 1.1 - Updated to support openocd svn:1135 or later      #
+#                                                                         #
+###########################################################################
+
+reset halt
+wait halt
+flash erase_sector 0 0 21
+flash write_image ms.bin
+reset run 
+shutdown
+
