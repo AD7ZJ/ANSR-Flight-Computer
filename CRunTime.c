@@ -73,8 +73,8 @@ caddr_t _sbrk_r(void *reent, size_t incr)
 
     prev_heap_end = heap_end;
 
-    if(( heap_end + incr ) > stack_ptr )
-        return (caddr_t) -1;
+    //if(( heap_end + incr ) > stack_ptr )
+        //return (caddr_t) -1;
 
     heap_end += incr;
     return (caddr_t) prev_heap_end;

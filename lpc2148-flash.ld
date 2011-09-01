@@ -33,7 +33,7 @@ ENTRY(_boot)
    and undefined conditions.  NOTE:  This is the only place you have to
    change the stack size information.  The crt.s assembler uses these values
    to set and clear the stack. */
-C_STACK_SIZE   = 0x1000;
+C_STACK_SIZE   = 0x2000;
 IRQ_STACK_SIZE = 0x400;
 FIQ_STACK_SIZE = 0x100;
 SVC_STACK_SIZE = 0x100;

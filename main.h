@@ -58,6 +58,13 @@
 #include "APRSBeacon.h"
 #include "IOPorts.h"
 
+#include <string.h>
+#include "partition.h"
+#include "fat16.h"
+#include "fat16_config.h"
+#include "sd_raw.h"
+#include "rootdir.h"
+
 #endif  // #ifndef MAIN_H
 
 

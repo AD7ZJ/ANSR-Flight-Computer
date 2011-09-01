@@ -1,4 +1,4 @@
-APRSBeacon.o: APRSBeacon.cpp main.h ../arm/arm7lib/armlib.h \
+sd_raw.o: sd_raw.cpp main.h ../arm/arm7lib/armlib.h \
  ../arm/arm7lib/lpc214x.h \
  /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/../../../../arm-none-eabi/include/c++/4.5.2/cmath \
  /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/../../../../arm-none-eabi/include/c++/4.5.2/arm-none-eabi/bits/c++config.h \

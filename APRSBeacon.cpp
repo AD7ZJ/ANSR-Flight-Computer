@@ -201,6 +201,25 @@ void APRSBeacon::ScheduleMessage()
 }
 
 /**
+ * Initialize the FAT library and SD card
+ */
+void APRSBeacon::fat_initialize() {
+	UART0 * uart = UART0::GetInstance();
+	if(!sd_raw_init())
+	{
+		uart->WriteLine("SD Init Error\n\r");
+		return;
+	}
+
+	if(openroot())
+	{
+		uart->WriteLine("SD OpenRoot Error\n\r");
+	}
+	return;
+}
+
+
+/**
  * Start and run the mission application.
  */
 void APRSBeacon::Run()
@@ -250,6 +269,8 @@ void APRSBeacon::Run()
     IOPorts::RadioPower(true);
     SystemControl::Sleep(100);
 
+    FIO0DIR |= (1<<20);
+
     // Show a startup message on the serial port.
     UART0::GetInstance()->WriteLine ("System booted");
 
@@ -259,18 +280,31 @@ void APRSBeacon::Run()
     // Transmit a startup message.
     this->afsk->Transmit (">APRS Beacon v1.1");
 
+    int * test;
+    test = (int*)malloc(4);
+    *test = 0xdefac8ed;
+
+    fat_initialize();
+    struct fat16_file_struct* handle;
+	handle = root_open_new("test.txt");
+	sd_raw_sync();
+
     //Log::GetInstance()->SystemBooted();
 
     for (;;)
     {
+
         // Check the serial port for engineering commands.
         eng->ProcessCommand();
 
         // Update the waveform state machine as required.
         this->afsk->Update();
 
+
+
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
+
     } // END for
 }
 

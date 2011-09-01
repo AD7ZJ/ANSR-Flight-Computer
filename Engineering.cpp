@@ -256,6 +256,12 @@ void Engineering::ProcessCommand()
                 uart->WriteLine (this->gps->Version());
                 break;                
                        
+            case 'q':
+            	if(!sd_raw_init())
+            	{
+            		uart->WriteLine("SD Init Error\n\r");
+            	}
+            	break;
             default:
                 uart->WriteLine ("Unknown command.  Press 'h' for help.");
                 break;

@@ -42,6 +42,7 @@ public:
     APRSBeacon();
     
     void Run();
+    void fat_initialize();
 
     static APRSBeacon *GetInstance();
     

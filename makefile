@@ -69,10 +69,12 @@ UDEFS =
 UADEFS = 
 
 # List C source files here
-CSRC  = CRunTime.c
+CSRC  = CRunTime.c 
 
 # List CPP source files here
-CPPSRC = AFSK.cpp main.cpp Engineering.cpp APRSBeacon.cpp IOPorts.cpp Log.cpp
+CPPSRC = AFSK.cpp main.cpp Engineering.cpp APRSBeacon.cpp IOPorts.cpp Log.cpp 
+# SD card stuff
+CPPSRC += rootdir.cpp sd_raw.cpp fat16.cpp partition.cpp
 
 # List ASM source files here
 ASRC = crt.s
@@ -88,7 +90,7 @@ ULIBS = ../arm/arm7lib/libarm7lib.a
 #-larm7lib
 
 # Define optimisation level here
-OPT = -O2
+OPT = -O0 # O2
 
 #
 # End of user defines
