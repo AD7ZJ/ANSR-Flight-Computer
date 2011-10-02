@@ -89,6 +89,7 @@ APRSBeacon::APRSBeacon()
     this->peakAltitude = 0;
     this->startGPSTime = 0;
     this->statusLEDOffTick = 0;
+    this->flash = FAT16::GetInstance();
 }
 
 /**
@@ -205,13 +206,13 @@ void APRSBeacon::ScheduleMessage()
  */
 void APRSBeacon::fat_initialize() {
 	UART0 * uart = UART0::GetInstance();
-	if(!sd_raw_init())
+	if(!flash->sd_raw_init())
 	{
 		uart->WriteLine("SD Init Error\n\r");
 		return;
 	}
 
-	if(openroot())
+	if(flash->openroot())
 	{
 		uart->WriteLine("SD OpenRoot Error\n\r");
 	}
@@ -224,6 +225,7 @@ void APRSBeacon::fat_initialize() {
  */
 void APRSBeacon::Run()
 {
+	int written;
     // Set the system clock to the minimum speed required for USB operation.
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
 
@@ -269,7 +271,7 @@ void APRSBeacon::Run()
     IOPorts::RadioPower(true);
     SystemControl::Sleep(100);
 
-    FIO0DIR |= (1<<20);
+    //FIO0DIR |= (1<<20);
 
     // Show a startup message on the serial port.
     UART0::GetInstance()->WriteLine ("System booted");
@@ -285,9 +287,18 @@ void APRSBeacon::Run()
     *test = 0xdefac8ed;
 
     fat_initialize();
-    struct fat16_file_struct* handle;
-	handle = root_open_new("test.txt");
-	sd_raw_sync();
+
+    uint8_t testString[] = "This is a test";
+
+    //struct fat16_file_struct* handle;
+	handle = flash->root_open_new("test10.txt");
+	flash->sd_raw_sync();
+	written = flash->fat16_write_file(handle, testString, 14);
+
+	if(written < 0)
+		UART0::GetInstance()->WriteLine ("Failed to write file");
+
+	flash->sd_raw_sync();
 
     //Log::GetInstance()->SystemBooted();
 

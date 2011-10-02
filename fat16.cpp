@@ -59,6 +59,17 @@
  * @}
  */
 
+/// Reserve memory for singleton object.
+static FAT16 FAT16SingletonObject;
+
+/**
+ *  Get a pointer to the FAT16 object.
+ */
+FAT16 * FAT16::GetInstance()
+{
+    return  &FAT16SingletonObject;
+}
+
 #define FAT16_CLUSTER_FREE 0x0000
 #define FAT16_CLUSTER_RESERVED_MIN (uint16_t)0xfff0
 #define FAT16_CLUSTER_RESERVED_MAX (uint16_t)0xfff6
@@ -70,122 +81,9 @@
 #define FAT16_DIRENTRY_LFNLAST (1 << 6)
 #define FAT16_DIRENTRY_LFNSEQMASK ((1 << 6) - 1)
 
-/* Each entry within the directory table has a size of 32 bytes
- * and either contains a 8.3 DOS-style file name or a part of a
- * long file name, which may consist of several directory table
- * entries at once.
- *
- * multi-byte integer values are stored little-endian!
- *
- * 8.3 file name entry:
- * ====================
- * offset  length  description
- *      0       8  name (space padded)
- *      8       3  extension (space padded)
- *     11       1  attributes (FAT16_ATTRIB_*)
- 
- *     0x0E     2  Creation Time
- *     0x10     2  Creation Date
- 
- *
- * long file name (lfn) entry ordering for a single file name:
- * ===========================================================
- * LFN entry n
- *     ...
- * LFN entry 2
- * LFN entry 1
- * 8.3 entry (see above)
- *
- * lfn entry:
- * ==========
- * offset  length  description
- *      0       1  ordinal field
- *      1       2  unicode character 1
- *      3       3  unicode character 2
- *      5       3  unicode character 3
- *      7       3  unicode character 4
- *      9       3  unicode character 5
- *     11       1  attribute (always 0x0f)
- *     12       1  type (reserved, always 0)
- *     13       1  checksum
- *     14       2  unicode character 6
- *     16       2  unicode character 7
- *     18       2  unicode character 8
- *     20       2  unicode character 9
- *     22       2  unicode character 10
- *     24       2  unicode character 11
- *     26       2  cluster (unused, always 0)
- *     28       2  unicode character 12
- *     30       2  unicode character 13
- *
- * The ordinal field contains a descending number, from n to 1.
- * For the n'th lfn entry the ordinal field is or'ed with 0x40.
- * For deleted lfn entries, the ordinal field is set to 0xe5.
- */
 
-struct fat16_header_struct
-{
-    uint32_t size;
 
-    uint32_t fat_offset;
-    uint32_t fat_size;
 
-    uint16_t sector_size;
-    uint16_t cluster_size;
-
-    uint32_t root_dir_offset;
-
-    uint32_t cluster_zero_offset;
-};
-
-struct fat16_fs_struct
-{
-    struct partition_struct* partition;
-    struct fat16_header_struct header;
-};
-
-struct fat16_file_struct
-{
-    struct fat16_fs_struct* fs;
-    struct fat16_dir_entry_struct dir_entry;
-    uint32_t pos;
-    uint16_t pos_cluster;
-};
-
-struct fat16_dir_struct
-{
-    struct fat16_fs_struct* fs;
-    struct fat16_dir_entry_struct dir_entry;
-    uint16_t entry_next;
-};
-
-struct fat16_read_callback_arg
-{
-    uint16_t entry_cur;
-    uint16_t entry_num;
-    uint32_t entry_offset;
-    uint8_t byte_count;
-};
-
-struct fat16_usage_count_callback_arg
-{
-    uint16_t cluster_count;
-    uint8_t buffer_size;
-};
-
-static uint8_t fat16_read_header(struct fat16_fs_struct* fs);
-static uint8_t fat16_read_root_dir_entry(const struct fat16_fs_struct* fs, uint16_t entry_num, struct fat16_dir_entry_struct* dir_entry);
-static uint8_t fat16_read_sub_dir_entry(const struct fat16_fs_struct* fs, uint16_t entry_num, const struct fat16_dir_entry_struct* parent, struct fat16_dir_entry_struct* dir_entry);
-static uint8_t fat16_dir_entry_seek_callback(uint8_t* buffer, uint32_t offset, void* p);
-static uint8_t fat16_dir_entry_read_callback(uint8_t* buffer, uint32_t offset, void* p);
-static uint8_t fat16_interpret_dir_entry(struct fat16_dir_entry_struct* dir_entry, const uint8_t* raw_entry);
-static uint16_t fat16_get_next_cluster(const struct fat16_fs_struct* fs, uint16_t cluster_num);
-static uint16_t fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num, uint16_t count);
-static uint8_t fat16_free_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num);
-static uint8_t fat16_terminate_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num);
-static uint8_t fat16_write_dir_entry(const struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry);
-
-static uint8_t fat16_get_fs_free_callback(uint8_t* buffer, uint32_t offset, void* p);
 
 /**
  * \ingroup fat16_fs
@@ -195,7 +93,7 @@ static uint8_t fat16_get_fs_free_callback(uint8_t* buffer, uint32_t offset, void
  * \returns 0 on error, a FAT16 filesystem descriptor on success.
  * \see fat16_open
  */
-struct fat16_fs_struct* fat16_open(struct partition_struct* partition)
+FAT16::fat16_fs_struct* FAT16::fat16_open(struct partition_struct* partition)
 {
 	UART0 * uart = UART0::GetInstance();
     if(!partition ||
@@ -236,7 +134,7 @@ struct fat16_fs_struct* fat16_open(struct partition_struct* partition)
  * \param[in] fs The filesystem to close.
  * \see fat16_open
  */
-void fat16_close(struct fat16_fs_struct* fs)
+void FAT16::fat16_close(struct fat16_fs_struct* fs)
 {
     if(!fs)
         return;
@@ -251,7 +149,7 @@ void fat16_close(struct fat16_fs_struct* fs)
  * \param[inout] fs The filesystem for which to parse the header.
  * \returns 0 on failure, 1 on success.
  */
-uint8_t fat16_read_header(struct fat16_fs_struct* fs)
+uint8_t FAT16::fat16_read_header(struct fat16_fs_struct* fs)
 {
 	UART0 * uart = UART0::GetInstance();
     if(!fs)
@@ -268,7 +166,7 @@ uint8_t fat16_read_header(struct fat16_fs_struct* fs)
     uint8_t buffer[25];
     uint32_t partition_offset = partition->offset * 512;
 
-    if(!partition->device_read(partition_offset + 0x0b, buffer, sizeof(buffer)))
+    if(!(GetInstance()->*partition->device_read)(partition_offset + 0x0b, buffer, sizeof(buffer)))
         return 0;
 
     uint16_t bytes_per_sector = ((uint16_t) buffer[0x00]) |
@@ -351,7 +249,7 @@ uint8_t fat16_read_header(struct fat16_fs_struct* fs)
  * \returns 0 on failure, 1 on success
  * \see fat16_read_sub_dir_entry, fat16_read_dir_entry_by_path
  */
-uint8_t fat16_read_root_dir_entry(const struct fat16_fs_struct* fs, uint16_t entry_num, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_read_root_dir_entry(const struct fat16_fs_struct* fs, uint16_t entry_num, struct fat16_dir_entry_struct* dir_entry)
 {
     if(!fs || !dir_entry)
         return 0;
@@ -365,11 +263,11 @@ uint8_t fat16_read_root_dir_entry(const struct fat16_fs_struct* fs, uint16_t ent
     struct fat16_read_callback_arg arg;
     memset(&arg, 0, sizeof(arg));
     arg.entry_num = entry_num;
-    if(!device_read_interval(header->root_dir_offset,
+    if(!(GetInstance()->*device_read_interval)(header->root_dir_offset,
         buffer,
        sizeof(buffer),
        header->cluster_zero_offset - header->root_dir_offset,
-       fat16_dir_entry_seek_callback,
+       (device_read_callback_t) &FAT16::fat16_dir_entry_seek_callback,
        &arg) ||
        arg.entry_offset == 0
        )
@@ -377,11 +275,11 @@ uint8_t fat16_read_root_dir_entry(const struct fat16_fs_struct* fs, uint16_t ent
 
     /* read entry */
     memset(dir_entry, 0, sizeof(*dir_entry));
-    if(!device_read_interval(arg.entry_offset,
+    if(!(GetInstance()->*device_read_interval)(arg.entry_offset,
         buffer,
        sizeof(buffer),
        arg.byte_count,
-       fat16_dir_entry_read_callback,
+       (device_read_callback_t) &FAT16::fat16_dir_entry_read_callback,
        dir_entry))
     return 0;
 
@@ -399,7 +297,7 @@ uint8_t fat16_read_root_dir_entry(const struct fat16_fs_struct* fs, uint16_t ent
  * \returns 0 on failure, 1 on success
  * \see fat16_read_root_dir_entry, fat16_read_dir_entry_by_path
  */
-uint8_t fat16_read_sub_dir_entry(const struct fat16_fs_struct* fs, uint16_t entry_num, const struct fat16_dir_entry_struct* parent, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_read_sub_dir_entry(const struct fat16_fs_struct* fs, uint16_t entry_num, const struct fat16_dir_entry_struct* parent, struct fat16_dir_entry_struct* dir_entry)
 {
     if(!fs || !parent || !dir_entry)
         return 0;
@@ -423,11 +321,11 @@ uint8_t fat16_read_sub_dir_entry(const struct fat16_fs_struct* fs, uint16_t entr
         /* seek to the n-th entry */
         memset(&arg, 0, sizeof(arg));
         arg.entry_num = entry_num;
-        if(!fs->partition->device_read_interval(cluster_offset,
+        if(!(GetInstance()->*fs->partition->device_read_interval)(cluster_offset,
             buffer,
            sizeof(buffer),
            cluster_size,
-           fat16_dir_entry_seek_callback,
+           &FAT16::fat16_dir_entry_seek_callback,
            &arg)
            )
         return 0;
@@ -444,11 +342,11 @@ uint8_t fat16_read_sub_dir_entry(const struct fat16_fs_struct* fs, uint16_t entr
     memset(dir_entry, 0, sizeof(*dir_entry));
 
     /* read entry */
-    if(!fs->partition->device_read_interval(arg.entry_offset,
+    if(!(GetInstance()->*fs->partition->device_read_interval)(arg.entry_offset,
         buffer,
        sizeof(buffer),
        arg.byte_count,
-       fat16_dir_entry_read_callback,
+       (device_read_callback_t) &FAT16::fat16_dir_entry_read_callback,
        dir_entry))
     return 0;
 
@@ -459,7 +357,7 @@ uint8_t fat16_read_sub_dir_entry(const struct fat16_fs_struct* fs, uint16_t entr
  * \ingroup fat16_fs
  * Callback function for seeking through subdirectory entries.
  */
-uint8_t fat16_dir_entry_seek_callback(uint8_t* buffer, uint32_t offset, void* p)
+uint8_t FAT16::fat16_dir_entry_seek_callback(uint8_t* buffer, uint32_t offset, void* p)
 {
     struct fat16_read_callback_arg* arg = (fat16_read_callback_arg*)p;
 
@@ -487,7 +385,7 @@ uint8_t fat16_dir_entry_seek_callback(uint8_t* buffer, uint32_t offset, void* p)
  * \ingroup fat16_fs
  * Callback function for reading a directory entry.
  */
-uint8_t fat16_dir_entry_read_callback(uint8_t* buffer, uint32_t offset, void* p)
+uint8_t FAT16::fat16_dir_entry_read_callback(uint8_t* buffer, uint32_t offset, void* p)
 {
     struct fat16_dir_entry_struct* dir_entry = (fat16_dir_entry_struct*)p;
 
@@ -527,7 +425,7 @@ uint8_t fat16_dir_entry_read_callback(uint8_t* buffer, uint32_t offset, void* p)
  * \returns 0 on failure, 1 on success and 2 if the
  *          directory entry is complete.
  */
-uint8_t fat16_interpret_dir_entry(struct fat16_dir_entry_struct* dir_entry, const uint8_t* raw_entry)
+uint8_t FAT16::fat16_interpret_dir_entry(struct fat16_dir_entry_struct* dir_entry, const uint8_t* raw_entry)
 {
     if(!dir_entry || !raw_entry || !raw_entry[0])
         return 0;
@@ -618,7 +516,7 @@ uint8_t fat16_interpret_dir_entry(struct fat16_dir_entry_struct* dir_entry, cons
  * \returns 0 on failure, 1 on success.
  * \see fat16_read_dir
  */
-uint8_t fat16_get_dir_entry_of_path(struct fat16_fs_struct* fs, const char* path, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_get_dir_entry_of_path(struct fat16_fs_struct* fs, const char* path, struct fat16_dir_entry_struct* dir_entry)
 {
     if(!fs || !path || path[0] == '\0' || !dir_entry)
         return 0;
@@ -689,14 +587,14 @@ uint8_t fat16_get_dir_entry_of_path(struct fat16_fs_struct* fs, const char* path
  * \param[in] cluster_num The number of the cluster for which to determine its successor.
  * \returns The wanted cluster number, or 0 on error.
  */
-uint16_t fat16_get_next_cluster(const struct fat16_fs_struct* fs, uint16_t cluster_num)
+uint16_t FAT16::fat16_get_next_cluster(const struct fat16_fs_struct* fs, uint16_t cluster_num)
 {
     if(!fs || cluster_num < 2)
         return 0;
 
     /* read appropriate fat entry */
     uint8_t fat_entry[2];
-    if(!fs->partition->device_read(fs->header.fat_offset + 2 * cluster_num, fat_entry, 2))
+    if(!(GetInstance()->*fs->partition->device_read)(fs->header.fat_offset + 2 * cluster_num, fat_entry, 2))
         return 0;
 
     /* determine next cluster from fat */
@@ -724,7 +622,7 @@ uint16_t fat16_get_next_cluster(const struct fat16_fs_struct* fs, uint16_t clust
  * \param[in] count The number of clusters to allocate.
  * \returns 0 on failure, the number of the first new cluster on success.
  */
-uint16_t fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num, uint16_t count)
+uint16_t FAT16::fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num, uint16_t count)
 {
     #if FAT16_WRITE_SUPPORT
         if(!fs)
@@ -740,7 +638,7 @@ uint16_t fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluste
         uint16_t cluster_new;
         for(cluster_new = 0; cluster_new < cluster_max; ++cluster_new)
         {
-            if(!device_read(fat_offset + 2 * cluster_new, buffer, sizeof(buffer)))
+            if(!(GetInstance()->*device_read)(fat_offset + 2 * cluster_new, buffer, sizeof(buffer)))
                 return 0;
     
             /* check if this is a free cluster */
@@ -759,7 +657,7 @@ uint16_t fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluste
                     buffer[1] = (cluster_next >> 8) & 0xff;
                 }
     
-                if(!device_write(fat_offset + 2 * cluster_new, buffer, sizeof(buffer)))
+                if(!(GetInstance()->*device_write)(fat_offset + 2 * cluster_new, buffer, sizeof(buffer)))
                     break;
     
                 cluster_next = cluster_new;
@@ -780,7 +678,7 @@ uint16_t fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluste
             {
                 buffer[0] = cluster_next & 0xff;
                 buffer[1] = (cluster_next >> 8) & 0xff;
-                if(!device_write(fat_offset + 2 * cluster_num, buffer, sizeof(buffer)))
+                if(!(GetInstance()->*device_write)(fat_offset + 2 * cluster_num, buffer, sizeof(buffer)))
                     break;
             }
     
@@ -817,7 +715,7 @@ uint16_t fat16_append_clusters(const struct fat16_fs_struct* fs, uint16_t cluste
  * \returns 0 on failure, 1 on success.
  * \see fat16_terminate_clusters
  */
-uint8_t fat16_free_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num)
+uint8_t FAT16::fat16_free_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num)
 {
     #if FAT16_WRITE_SUPPORT
         if(!fs || cluster_num < 2)
@@ -827,7 +725,7 @@ uint8_t fat16_free_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_n
         uint8_t buffer[2];
         while(cluster_num)
         {
-            if(!fs->partition->device_read(fat_offset + 2 * cluster_num, buffer, 2))
+            if(!(GetInstance()->*fs->partition->device_read)(fat_offset + 2 * cluster_num, buffer, 2))
                 return 0;
     
             /* get next cluster of current cluster before freeing current cluster */
@@ -852,7 +750,7 @@ uint8_t fat16_free_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_n
             /* free cluster */
             buffer[0] = FAT16_CLUSTER_FREE & 0xff;
             buffer[1] = (FAT16_CLUSTER_FREE >> 8) & 0xff;
-            fs->partition->device_write(fat_offset + 2 * cluster_num, buffer, 2);
+            (GetInstance()->*fs->partition->device_write)(fat_offset + 2 * cluster_num, buffer, 2);
     
             /* We continue in any case here, even if freeing the cluster failed.
                                              * The cluster is lost, but maybe we can still free up some later ones.
@@ -879,7 +777,7 @@ uint8_t fat16_free_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_n
  * \returns 0 on failure, 1 on success.
  * \see fat16_free_clusters
  */
-uint8_t fat16_terminate_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num)
+uint8_t FAT16::fat16_terminate_clusters(const struct fat16_fs_struct* fs, uint16_t cluster_num)
 {
     #if FAT16_WRITE_SUPPORT
         if(!fs || cluster_num < 2)
@@ -892,7 +790,7 @@ uint8_t fat16_terminate_clusters(const struct fat16_fs_struct* fs, uint16_t clus
         uint8_t buffer[2];
         buffer[0] = FAT16_CLUSTER_LAST_MAX & 0xff;
         buffer[1] = (FAT16_CLUSTER_LAST_MAX >> 8) & 0xff;
-        if(!fs->partition->device_write(fs->header.fat_offset + 2 * cluster_num, buffer, 2))
+        if(!(GetInstance()->*fs->partition->device_write)(fs->header.fat_offset + 2 * cluster_num, buffer, 2))
             return 0;
     
         /* free remaining clusters */
@@ -914,7 +812,7 @@ uint8_t fat16_terminate_clusters(const struct fat16_fs_struct* fs, uint16_t clus
  * \returns The file handle, or 0 on failure.
  * \see fat16_close_file
  */
-struct fat16_file_struct* fat16_open_file(struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry)
+FAT16::fat16_file_struct* FAT16::fat16_open_file(struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry)
 {
     if(!fs || !dir_entry || (dir_entry->attributes & FAT16_ATTRIB_DIR))
         return 0;
@@ -938,7 +836,7 @@ struct fat16_file_struct* fat16_open_file(struct fat16_fs_struct* fs, const stru
  * \param[in] fd The file handle of the file to close.
  * \see fat16_open_file
  */
-void fat16_close_file(struct fat16_file_struct* fd)
+void FAT16::fat16_close_file(struct fat16_file_struct* fd)
 {
     if(fd)
         free(fd);
@@ -956,7 +854,7 @@ void fat16_close_file(struct fat16_file_struct* fd)
  * \returns The number of bytes read, 0 on end of file, or -1 on failure.
  * \see fat16_write_file
  */
-int16_t fat16_read_file(struct fat16_file_struct* fd, uint8_t* buffer, uint16_t buffer_len)
+int16_t FAT16::fat16_read_file(struct fat16_file_struct* fd, uint8_t* buffer, uint16_t buffer_len)
 {
     /* check arguments */
     if(!fd || !buffer || buffer_len < 1)
@@ -1010,7 +908,7 @@ int16_t fat16_read_file(struct fat16_file_struct* fd, uint8_t* buffer, uint16_t 
             copy_length = buffer_left;
 
         /* read data */
-        if(!fd->fs->partition->device_read(cluster_offset, buffer, copy_length))
+        if(!(GetInstance()->*fd->fs->partition->device_read)(cluster_offset, buffer, copy_length))
             return buffer_len - buffer_left;
 
         /* calculate new file position */
@@ -1052,7 +950,7 @@ int16_t fat16_read_file(struct fat16_file_struct* fd, uint8_t* buffer, uint16_t 
  * \returns The number of bytes written, 0 on disk full, or -1 on failure.
  * \see fat16_read_file
  */
-int16_t fat16_write_file(struct fat16_file_struct* fd, const uint8_t* buffer, uint16_t buffer_len)
+int16_t FAT16::fat16_write_file(struct fat16_file_struct* fd, const uint8_t* buffer, uint16_t buffer_len)
 {
     #if FAT16_WRITE_SUPPORT
         /* check arguments */
@@ -1116,7 +1014,7 @@ int16_t fat16_write_file(struct fat16_file_struct* fd, const uint8_t* buffer, ui
                 write_length = buffer_left;
     
             /* write data which fits into the current cluster */
-            if(!fd->fs->partition->device_write(cluster_offset, buffer, write_length))
+            if(!(GetInstance()->*fd->fs->partition->device_write)(cluster_offset, buffer, write_length))
                 break;
     
             /* calculate new file position */
@@ -1198,7 +1096,7 @@ int16_t fat16_write_file(struct fat16_file_struct* fd, const uint8_t* buffer, ui
  * \param[in] whence Affects the way \c offset is interpreted, see above.
  * \returns 0 on failure, 1 on success.
  */
-uint8_t fat16_seek_file(struct fat16_file_struct* fd, int32_t* offset, uint8_t whence)
+uint8_t FAT16::fat16_seek_file(struct fat16_file_struct* fd, int32_t* offset, uint8_t whence)
 {
     if(!fd || !offset)
         return 0;
@@ -1248,7 +1146,7 @@ uint8_t fat16_seek_file(struct fat16_file_struct* fd, int32_t* offset, uint8_t w
  * \param[in] size The new size of the file.
  * \returns 0 on failure, 1 on success.
  */
-uint8_t fat16_resize_file(struct fat16_file_struct* fd, uint32_t size)
+uint8_t FAT16::fat16_resize_file(struct fat16_file_struct* fd, uint32_t size)
 {
     #if FAT16_WRITE_SUPPORT
         if(!fd)
@@ -1342,7 +1240,7 @@ uint8_t fat16_resize_file(struct fat16_file_struct* fd, uint32_t size)
  * \returns An opaque directory descriptor on success, 0 on failure.
  * \see fat16_close_dir
  */
-struct fat16_dir_struct* fat16_open_dir(struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry)
+FAT16::fat16_dir_struct* FAT16::fat16_open_dir(struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry)
 {
     if(!fs || !dir_entry || !(dir_entry->attributes & FAT16_ATTRIB_DIR))
         return 0;
@@ -1369,7 +1267,7 @@ struct fat16_dir_struct* fat16_open_dir(struct fat16_fs_struct* fs, const struct
  * \param[in] dd The directory descriptor to close.
  * \see fat16_open_dir
  */
-void fat16_close_dir(struct fat16_dir_struct* dd)
+void FAT16::fat16_close_dir(struct fat16_dir_struct* dd)
 {
     if(dd)
         free(dd);
@@ -1384,7 +1282,7 @@ void fat16_close_dir(struct fat16_dir_struct* dd)
  * \returns 0 on failure, 1 on success.
  * \see fat16_reset_dir
  */
-uint8_t fat16_read_dir(struct fat16_dir_struct* dd, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_read_dir(struct fat16_dir_struct* dd, struct fat16_dir_entry_struct* dir_entry)
 {
     if(!dd || !dir_entry)
         return 0;
@@ -1425,7 +1323,7 @@ uint8_t fat16_read_dir(struct fat16_dir_struct* dd, struct fat16_dir_entry_struc
  * \returns 0 on failure, 1 on success.
  * \see fat16_read_dir
  */
-uint8_t fat16_reset_dir(struct fat16_dir_struct* dd)
+uint8_t FAT16::fat16_reset_dir(struct fat16_dir_struct* dd)
 {
     if(!dd)
         return 0;
@@ -1434,7 +1332,7 @@ uint8_t fat16_reset_dir(struct fat16_dir_struct* dd)
     return 1;
 }
 
-uint8_t fat16_set_dir(struct fat16_dir_struct* dd, uint16_t offset)
+uint8_t FAT16::fat16_set_dir(struct fat16_dir_struct* dd, uint16_t offset)
 {
     if(!dd)
         return 0;
@@ -1462,7 +1360,7 @@ uint8_t fat16_set_dir(struct fat16_dir_struct* dd, uint16_t offset)
  * \param[in] dir_entry The directory entry to write.
  * \returns 0 on failure, 1 on success.
  */
-uint8_t fat16_write_dir_entry(const struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_write_dir_entry(const struct fat16_fs_struct* fs, const struct fat16_dir_entry_struct* dir_entry)
 {
     #if FAT16_WRITE_SUPPORT
         if(!fs || !dir_entry)
@@ -1575,7 +1473,7 @@ uint8_t fat16_write_dir_entry(const struct fat16_fs_struct* fs, const struct fat
         buffer[0x1f] = (dir_entry->file_size >> 24) & 0xff;
     
         /* write to disk */
-        if(!device_write(offset + (uint32_t) lfn_entry_count * 32, buffer, sizeof(buffer)))
+        if(!(GetInstance()->*device_write)(offset + (uint32_t) lfn_entry_count * 32, buffer, sizeof(buffer)))
             return 0;
     
         /* calculate checksum of 8.3 name */
@@ -1626,7 +1524,7 @@ uint8_t fat16_write_dir_entry(const struct fat16_fs_struct* fs, const struct fat
             buffer[0x0d] = checksum;
     
             /* write entry */
-            device_write(offset, buffer, sizeof(buffer));
+            (GetInstance()->*device_write)(offset, buffer, sizeof(buffer));
     
             offset += sizeof(buffer);
         }
@@ -1664,7 +1562,7 @@ uint8_t fat16_write_dir_entry(const struct fat16_fs_struct* fs, const struct fat
  * \returns 0 on failure, 1 on success.
  * \see fat16_delete_file
  */
-uint8_t fat16_create_file(struct fat16_dir_struct* parent, const char* file, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_create_file(struct fat16_dir_struct* parent, const char* file, struct fat16_dir_entry_struct* dir_entry)
 {
     #if FAT16_WRITE_SUPPORT
         if(!parent || !file || !file[0])
@@ -1747,7 +1645,7 @@ uint8_t fat16_create_file(struct fat16_dir_struct* parent, const char* file, str
     
             /* read next lfn or 8.3 entry */
             uint8_t first_char;
-            if(!fs->partition->device_read(offset, &first_char, sizeof(first_char)))
+            if(!(GetInstance()->*fs->partition->device_read)(offset, &first_char, sizeof(first_char)))
                 return 0;
     
             /* check if we found a free directory entry */
@@ -1795,7 +1693,7 @@ uint8_t fat16_create_file(struct fat16_dir_struct* parent, const char* file, str
  * \returns 0 on failure, 1 on success.
  * \see fat16_create_file
  */
-uint8_t fat16_delete_file(struct fat16_fs_struct* fs, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::fat16_delete_file(struct fat16_fs_struct* fs, struct fat16_dir_entry_struct* dir_entry)
 {
     #if FAT16_WRITE_SUPPORT
         if(!fs || !dir_entry)
@@ -1810,14 +1708,14 @@ uint8_t fat16_delete_file(struct fat16_fs_struct* fs, struct fat16_dir_entry_str
         while(1)
         {
             /* read directory entry */
-            if(!fs->partition->device_read(dir_entry_offset, buffer, sizeof(buffer)))
+            if(!(GetInstance()->*fs->partition->device_read)(dir_entry_offset, buffer, sizeof(buffer)))
                 return 0;
     
             /* mark the directory entry as deleted */
             buffer[0] = FAT16_DIRENTRY_DELETED;
     
             /* write back entry */
-            if(!fs->partition->device_write(dir_entry_offset, buffer, sizeof(buffer)))
+            if(!(GetInstance()->*fs->partition->device_write)(dir_entry_offset, buffer, sizeof(buffer)))
                 return 0;
     
             /* check if we deleted the whole entry */
@@ -1843,7 +1741,7 @@ uint8_t fat16_delete_file(struct fat16_fs_struct* fs, struct fat16_dir_entry_str
  * \param[in] fs The filesystem on which to operate.
  * \returns 0 on failure, the filesystem size in bytes otherwise.
  */
-uint32_t fat16_get_fs_size(const struct fat16_fs_struct* fs)
+uint32_t FAT16::fat16_get_fs_size(const struct fat16_fs_struct* fs)
 {
     if(!fs)
         return 0;
@@ -1861,7 +1759,7 @@ uint32_t fat16_get_fs_size(const struct fat16_fs_struct* fs)
  * \param[in] fs The filesystem on which to operate.
  * \returns 0 on failure, the free filesystem space in bytes otherwise.
  */
-uint32_t fat16_get_fs_free(const struct fat16_fs_struct* fs)
+uint32_t FAT16::fat16_get_fs_free(const struct fat16_fs_struct* fs)
 {
     if(!fs)
         return 0;
@@ -1879,11 +1777,11 @@ uint32_t fat16_get_fs_free(const struct fat16_fs_struct* fs)
         if(fat_size < length)
             length = fat_size;
 
-        if(!fs->partition->device_read_interval(fat_offset,
+        if(!(GetInstance()->*fs->partition->device_read_interval)(fat_offset,
             fat,
            sizeof(fat),
            length,
-           fat16_get_fs_free_callback,
+           (device_read_callback_t) &FAT16::fat16_get_fs_free_callback,
            &count_arg
            )
            )
@@ -1900,7 +1798,7 @@ uint32_t fat16_get_fs_free(const struct fat16_fs_struct* fs)
  * \ingroup fat16_fs
  * Callback function used for counting free clusters.
  */
-uint8_t fat16_get_fs_free_callback(uint8_t* buffer, uint32_t offset, void* p)
+uint8_t FAT16::fat16_get_fs_free_callback(uint8_t* buffer, uint32_t offset, void* p)
 {
     struct fat16_usage_count_callback_arg* count_arg = (struct fat16_usage_count_callback_arg*) p;
     uint8_t buffer_size = count_arg->buffer_size;
@@ -1916,7 +1814,7 @@ uint8_t fat16_get_fs_free_callback(uint8_t* buffer, uint32_t offset, void* p)
     return 1;
 }
 
-uint8_t find_file_in_dir(struct fat16_fs_struct* fs, struct fat16_dir_struct* dd, const char* name, struct fat16_dir_entry_struct* dir_entry)
+uint8_t FAT16::find_file_in_dir(struct fat16_fs_struct* fs, struct fat16_dir_struct* dd, const char* name, struct fat16_dir_entry_struct* dir_entry)
 {
     while(fat16_read_dir(dd, dir_entry))
     {
@@ -1930,7 +1828,7 @@ uint8_t find_file_in_dir(struct fat16_fs_struct* fs, struct fat16_dir_struct* dd
     return 0;
 }
 
-struct fat16_file_struct* open_file_in_dir(struct fat16_fs_struct* fs, struct fat16_dir_struct* dd, const char* name)
+FAT16::fat16_file_struct* FAT16::open_file_in_dir(struct fat16_fs_struct* fs, struct fat16_dir_struct* dd, const char* name)
 {
     struct fat16_dir_entry_struct file_entry;
     if(!find_file_in_dir(fs, dd, name, &file_entry))
@@ -1939,7 +1837,7 @@ struct fat16_file_struct* open_file_in_dir(struct fat16_fs_struct* fs, struct fa
     return fat16_open_file(fs, &file_entry);
 }
 
-int fat16_file_size(struct fat16_file_struct * file)
+int FAT16::fat16_file_size(struct fat16_file_struct * file)
 {
     return(file->dir_entry.file_size);
 }

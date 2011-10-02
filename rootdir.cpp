@@ -1,18 +1,14 @@
 #include "main.h"
 
-struct fat16_dir_entry_struct dir_entry;
-struct fat16_fs_struct* fs;
-struct partition_struct* partition;
-struct fat16_dir_struct* dd;
-struct fat16_file_struct * fd;
 
-int openroot(void)
+
+int FAT16::openroot(void)
 {
 	UART0 * uart = UART0::GetInstance();
     /* open first partition */
-    partition = partition_open((device_read_t) sd_raw_read,
-                               (device_read_interval_t) sd_raw_read_interval,
-                               (device_write_t) sd_raw_write,
+    partition = partition_open((device_read_t) &FAT16::sd_raw_read,
+                               (device_read_interval_t) &FAT16::sd_raw_read_interval,
+                               (device_write_t) &FAT16::sd_raw_write,
                                0);
 
     if(!partition)
@@ -20,9 +16,9 @@ int openroot(void)
         /* If the partition did not open, assume the storage device
              *      * is a "superfloppy", i.e. has no MBR.
              *           */
-        partition = partition_open((device_read_t) sd_raw_read,
-                                   (device_read_interval_t) sd_raw_read_interval,
-                                   (device_write_t) sd_raw_write,
+        partition = partition_open((device_read_t) &FAT16::sd_raw_read,
+                                   (device_read_interval_t) &FAT16::sd_raw_read_interval,
+                                   (device_write_t) &FAT16::sd_raw_write,
                                    -1);
         if(!partition)
         {
@@ -52,13 +48,13 @@ int openroot(void)
 }
 
 /* returns 1 if file exists, 0 else */
-int root_file_exists(char* name)
+int FAT16::root_file_exists(char* name)
 {
     return(find_file_in_dir(fs,dd,name,&dir_entry));
 }
 
 /* returns NULL if error, pointer if file opened */
-struct fat16_file_struct * root_open_new(char* name)
+FAT16::fat16_file_struct * FAT16::root_open_new(char* name)
 {
     if(fat16_create_file(dd,name,&dir_entry))
     {
@@ -70,12 +66,12 @@ struct fat16_file_struct * root_open_new(char* name)
     }
 }
 
-struct fat16_file_struct * root_open(char* name)
+FAT16::fat16_file_struct * FAT16::root_open(char* name)
 {
     return(open_file_in_dir(fs,dd,name));
 }
 
-uint8_t print_disk_info(const struct fat16_fs_struct* disk_fs)
+uint8_t FAT16::print_disk_info(const struct fat16_fs_struct* disk_fs)
 {
 	UART0 * uart = UART0::GetInstance();
     if(!disk_fs)
@@ -102,7 +98,7 @@ uint8_t print_disk_info(const struct fat16_fs_struct* disk_fs)
     return 1;
 }
 
-void root_disk_info(void)
+void FAT16::root_disk_info(void)
 {
     print_disk_info(fs);
 }
@@ -115,7 +111,7 @@ void root_disk_info(void)
  *
  * Assert (1) reset whenever you want to re-start
  */
-char rootDirectory_files_stream(int reset)
+char FAT16::rootDirectory_files_stream(int reset)
 {
 
     static int idx = 0;
@@ -161,7 +157,7 @@ char rootDirectory_files_stream(int reset)
 //		len is the size of the array to read
 //Post: buf contains the characters of the filenames in Root, starting at the first file
 //		and ending after len characters
-int rootDirectory_files(char* buf, int len)
+int FAT16::rootDirectory_files(char* buf, int len)
 {
     int i;
     int num=0;
@@ -197,7 +193,7 @@ int rootDirectory_files(char* buf, int len)
     return num;
 }
 
-void root_format(void)
+void FAT16::root_format(void)
 {
     fat16_reset_dir(dd);
     while(fat16_read_dir(dd,&dir_entry))
@@ -207,7 +203,7 @@ void root_format(void)
     }
 }
 
-int root_delete(char* filename)
+int FAT16::root_delete(char* filename)
 {
     if(find_file_in_dir(fs,dd,filename,&dir_entry))
     {

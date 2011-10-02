@@ -1,4 +1,4 @@
-ARM GAS  /tmp/ccyIsyLc.s 			page 1
+ARM GAS  /tmp/cc0jLgf2.s 			page 1
 
 
    1              		.cpu arm7tdmi
@@ -58,7 +58,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
   51              	.Ltext0:
   52              	@ Compiler executable checksum: f905e5265c5e2bdb166d278b4b873d0b
   53              	
-ARM GAS  /tmp/ccyIsyLc.s 			page 2
+ARM GAS  /tmp/cc0jLgf2.s 			page 2
 
 
   54              		.cfi_sections	.debug_frame
@@ -118,7 +118,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
   78              		.cfi_endproc
   79              	.LFE0:
   80              		.size	_isatty, .-_isatty
-ARM GAS  /tmp/ccyIsyLc.s 			page 3
+ARM GAS  /tmp/cc0jLgf2.s 			page 3
 
 
   81              		.section	.text._lseek,"ax",%progbits
@@ -178,7 +178,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  126              		.loc 1 39 0
  127 0010 08309DE5 		ldr	r3, [sp, #8]	@ buffer.3, buffer
  128 0014 2A20A0E3 		mov	r2, #42	@ tmp136,
-ARM GAS  /tmp/ccyIsyLc.s 			page 4
+ARM GAS  /tmp/cc0jLgf2.s 			page 4
 
 
  129 0018 0020C3E5 		strb	r2, [r3, #0]	@ tmp137,* buffer.3
@@ -238,7 +238,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  172              		@ Function supports interworking.
  173              		@ args = 0, pretend = 0, frame = 16
  174              		@ frame_needed = 0, uses_anonymous_args = 0
-ARM GAS  /tmp/ccyIsyLc.s 			page 5
+ARM GAS  /tmp/cc0jLgf2.s 			page 5
 
 
  175              		@ link register save eliminated.
@@ -298,7 +298,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  221              		.section	.text._sbrk_r,"ax",%progbits
  222              		.align	2
  223              		.global	_sbrk_r
-ARM GAS  /tmp/ccyIsyLc.s 			page 6
+ARM GAS  /tmp/cc0jLgf2.s 			page 6
 
 
  224              		.type	_sbrk_r, %function
@@ -358,7 +358,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  257 0044 10309FE5 		ldr	r3, .L9	@ tmp145,
  258 0048 002083E5 		str	r2, [r3, #0]	@ heap_end.2, heap_end
   80:CRunTime.c    ****     return (caddr_t) prev_heap_end;
-ARM GAS  /tmp/ccyIsyLc.s 			page 7
+ARM GAS  /tmp/cc0jLgf2.s 			page 7
 
 
  259              		.loc 1 80 0
@@ -418,7 +418,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  312 004b 00       		.sleb128 0
  313 004c 04000000 		.4byte	.LCFI2
  314 0050 2C000000 		.4byte	.LFE2
-ARM GAS  /tmp/ccyIsyLc.s 			page 8
+ARM GAS  /tmp/cc0jLgf2.s 			page 8
 
 
  315 0054 0200     		.2byte	0x2
@@ -478,7 +478,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  369 00d7 10       		.sleb128 16
  370 00d8 00000000 		.4byte	0x0
  371 00dc 00000000 		.4byte	0x0
-ARM GAS  /tmp/ccyIsyLc.s 			page 9
+ARM GAS  /tmp/cc0jLgf2.s 			page 9
 
 
  372              		.file 2 "/home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/../../../.
@@ -538,7 +538,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  426 0068 6C000000 		.4byte	0x6c
  427 006c 02       		.uleb128 0x2
  428 006d 04       		.byte	0x4
-ARM GAS  /tmp/ccyIsyLc.s 			page 10
+ARM GAS  /tmp/cc0jLgf2.s 			page 10
 
 
  429 006e 05       		.byte	0x5
@@ -598,7 +598,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  483 00dd 61000000 		.4byte	0x61
  484 00e1 04       		.uleb128 0x4
  485 00e2 7D010000 		.4byte	.LASF19
-ARM GAS  /tmp/ccyIsyLc.s 			page 11
+ARM GAS  /tmp/cc0jLgf2.s 			page 11
 
 
  486 00e6 04       		.byte	0x4
@@ -658,7 +658,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  540 014f 99010000 		.4byte	.LASF27
  541 0153 05       		.byte	0x5
  542 0154 1E       		.byte	0x1e
-ARM GAS  /tmp/ccyIsyLc.s 			page 12
+ARM GAS  /tmp/cc0jLgf2.s 			page 12
 
 
  543 0155 0D010000 		.4byte	0x10d
@@ -718,7 +718,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  597 01b5 05       		.byte	0x5
  598 01b6 32       		.byte	0x32
  599 01b7 A8000000 		.4byte	0xa8
-ARM GAS  /tmp/ccyIsyLc.s 			page 13
+ARM GAS  /tmp/cc0jLgf2.s 			page 13
 
 
  600 01bb 02       		.byte	0x2
@@ -778,7 +778,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  654 0218 23020000 		.4byte	0x223
  655 021c 0A       		.uleb128 0xa
  656 021d 4C000000 		.4byte	0x4c
-ARM GAS  /tmp/ccyIsyLc.s 			page 14
+ARM GAS  /tmp/cc0jLgf2.s 			page 14
 
 
  657 0221 01       		.byte	0x1
@@ -838,7 +838,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  711 0291 02       		.byte	0x2
  712 0292 91       		.byte	0x91
  713 0293 74       		.sleb128 -12
-ARM GAS  /tmp/ccyIsyLc.s 			page 15
+ARM GAS  /tmp/cc0jLgf2.s 			page 15
 
 
  714 0294 00       		.byte	0x0
@@ -898,7 +898,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  768 0304 91       		.byte	0x91
  769 0305 7C       		.sleb128 -4
  770 0306 00       		.byte	0x0
-ARM GAS  /tmp/ccyIsyLc.s 			page 16
+ARM GAS  /tmp/cc0jLgf2.s 			page 16
 
 
  771 0307 0B       		.uleb128 0xb
@@ -958,7 +958,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  825 0377 36       		.byte	0x36
  826 0378 45000000 		.4byte	0x45
  827 037c 02       		.byte	0x2
-ARM GAS  /tmp/ccyIsyLc.s 			page 17
+ARM GAS  /tmp/cc0jLgf2.s 			page 17
 
 
  828 037d 91       		.byte	0x91
@@ -1018,7 +1018,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  882 03e8 05       		.byte	0x5
  883 03e9 03       		.byte	0x3
  884 03ea 00000000 		.4byte	heap_end.4271
-ARM GAS  /tmp/ccyIsyLc.s 			page 18
+ARM GAS  /tmp/cc0jLgf2.s 			page 18
 
 
  885 03ee 10       		.uleb128 0x10
@@ -1078,7 +1078,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  939 001b 0B       		.uleb128 0xb
  940 001c 03       		.uleb128 0x3
  941 001d 0E       		.uleb128 0xe
-ARM GAS  /tmp/ccyIsyLc.s 			page 19
+ARM GAS  /tmp/cc0jLgf2.s 			page 19
 
 
  942 001e 00       		.byte	0x0
@@ -1138,7 +1138,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  996 0054 13       		.uleb128 0x13
  997 0055 00       		.byte	0x0
  998 0056 00       		.byte	0x0
-ARM GAS  /tmp/ccyIsyLc.s 			page 20
+ARM GAS  /tmp/cc0jLgf2.s 			page 20
 
 
  999 0057 08       		.uleb128 0x8
@@ -1198,7 +1198,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1053 008d 01       		.uleb128 0x1
  1054 008e 13       		.uleb128 0x13
  1055 008f 00       		.byte	0x0
-ARM GAS  /tmp/ccyIsyLc.s 			page 21
+ARM GAS  /tmp/cc0jLgf2.s 			page 21
 
 
  1056 0090 00       		.byte	0x0
@@ -1258,7 +1258,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1110 00c7 00       		.byte	0x0
  1111 00c8 10       		.uleb128 0x10
  1112 00c9 34       		.uleb128 0x34
-ARM GAS  /tmp/ccyIsyLc.s 			page 22
+ARM GAS  /tmp/cc0jLgf2.s 			page 22
 
 
  1113 00ca 00       		.byte	0x0
@@ -1318,7 +1318,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1161 0050 93030000 		.4byte	0x393
  1162 0054 5F736272 		.ascii	"_sbrk_r\000"
  1162      6B5F7200 
-ARM GAS  /tmp/ccyIsyLc.s 			page 23
+ARM GAS  /tmp/cc0jLgf2.s 			page 23
 
 
  1163 005c FD030000 		.4byte	0x3fd
@@ -1378,7 +1378,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1200      00
  1201 00b1 00000000 		.4byte	0x0
  1202              		.section	.debug_aranges,"",%progbits
-ARM GAS  /tmp/ccyIsyLc.s 			page 24
+ARM GAS  /tmp/cc0jLgf2.s 			page 24
 
 
  1203 0000 4C000000 		.4byte	0x4c
@@ -1438,7 +1438,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1251              	.LASF39:
  1252 0026 73745F62 		.ascii	"st_blocks\000"
  1252      6C6F636B 
-ARM GAS  /tmp/ccyIsyLc.s 			page 25
+ARM GAS  /tmp/cc0jLgf2.s 			page 25
 
 
  1252      7300
@@ -1498,7 +1498,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1284 00aa 5F5F6465 		.ascii	"__dev_t\000"
  1284      765F7400 
  1285              	.LASF28:
-ARM GAS  /tmp/ccyIsyLc.s 			page 26
+ARM GAS  /tmp/cc0jLgf2.s 			page 26
 
 
  1286 00b2 73745F75 		.ascii	"st_uid\000"
@@ -1558,7 +1558,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1311              	.LASF41:
  1312 014e 5F697361 		.ascii	"_isatty\000"
  1312      74747900 
-ARM GAS  /tmp/ccyIsyLc.s 			page 27
+ARM GAS  /tmp/cc0jLgf2.s 			page 27
 
 
  1313              	.LASF32:
@@ -1618,7 +1618,7 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1344 01d4 63616464 		.ascii	"caddr_t\000"
  1344      725F7400 
  1345              	.LASF30:
-ARM GAS  /tmp/ccyIsyLc.s 			page 28
+ARM GAS  /tmp/cc0jLgf2.s 			page 28
 
 
  1346 01dc 73745F72 		.ascii	"st_rdev\000"
@@ -1656,28 +1656,28 @@ ARM GAS  /tmp/ccyIsyLc.s 			page 1
  1366 022a 696E6F5F 		.ascii	"ino_t\000"
  1366      7400
  1367              		.ident	"GCC: (Sourcery G++ Lite 2011.03-42) 4.5.2"
-ARM GAS  /tmp/ccyIsyLc.s 			page 29
+ARM GAS  /tmp/cc0jLgf2.s 			page 29
 
 
 DEFINED SYMBOLS
                             *ABS*:00000000 CRunTime.c
-     /tmp/ccyIsyLc.s:56     .text._isatty:00000000 $a
-     /tmp/ccyIsyLc.s:59     .text._isatty:00000000 _isatty
-     /tmp/ccyIsyLc.s:82     .text._lseek:00000000 $a
-     /tmp/ccyIsyLc.s:85     .text._lseek:00000000 _lseek
-     /tmp/ccyIsyLc.s:109    .text._read:00000000 $a
-     /tmp/ccyIsyLc.s:112    .text._read:00000000 _read
-     /tmp/ccyIsyLc.s:140    .text._close:00000000 $a
-     /tmp/ccyIsyLc.s:143    .text._close:00000000 _close
-     /tmp/ccyIsyLc.s:165    .text._write:00000000 $a
-     /tmp/ccyIsyLc.s:168    .text._write:00000000 _write
-     /tmp/ccyIsyLc.s:192    .text._fstat:00000000 $a
-     /tmp/ccyIsyLc.s:195    .text._fstat:00000000 _fstat
-     /tmp/ccyIsyLc.s:222    .text._sbrk_r:00000000 $a
-     /tmp/ccyIsyLc.s:225    .text._sbrk_r:00000000 _sbrk_r
-     /tmp/ccyIsyLc.s:268    .text._sbrk_r:0000005c $d
-     /tmp/ccyIsyLc.s:275    .bss:00000000 heap_end.4271
-     /tmp/ccyIsyLc.s:274    .bss:00000000 $d
+     /tmp/cc0jLgf2.s:56     .text._isatty:00000000 $a
+     /tmp/cc0jLgf2.s:59     .text._isatty:00000000 _isatty
+     /tmp/cc0jLgf2.s:82     .text._lseek:00000000 $a
+     /tmp/cc0jLgf2.s:85     .text._lseek:00000000 _lseek
+     /tmp/cc0jLgf2.s:109    .text._read:00000000 $a
+     /tmp/cc0jLgf2.s:112    .text._read:00000000 _read
+     /tmp/cc0jLgf2.s:140    .text._close:00000000 $a
+     /tmp/cc0jLgf2.s:143    .text._close:00000000 _close
+     /tmp/cc0jLgf2.s:165    .text._write:00000000 $a
+     /tmp/cc0jLgf2.s:168    .text._write:00000000 _write
+     /tmp/cc0jLgf2.s:192    .text._fstat:00000000 $a
+     /tmp/cc0jLgf2.s:195    .text._fstat:00000000 _fstat
+     /tmp/cc0jLgf2.s:222    .text._sbrk_r:00000000 $a
+     /tmp/cc0jLgf2.s:225    .text._sbrk_r:00000000 _sbrk_r
+     /tmp/cc0jLgf2.s:268    .text._sbrk_r:0000005c $d
+     /tmp/cc0jLgf2.s:275    .bss:00000000 heap_end.4271
+     /tmp/cc0jLgf2.s:274    .bss:00000000 $d
                      .debug_frame:00000010 $d
 
 UNDEFINED SYMBOLS

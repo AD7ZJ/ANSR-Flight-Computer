@@ -6,150 +6,7 @@
 
 #include "main.h"
 
-/*
-#include <string.h>
-#include "sd_raw.h"
-#include "LPC214x.h"
-*/
 
-/**
- * \addtogroup sd_raw MMC/SD card raw access
- *
- * This module implements read and write access to MMC and
- * SD cards. It serves as a low-level driver for the higher
- * level modules such as partition and file system access.
- *
- * @{
- */
-/**
- * \file
- * MMC/SD raw access implementation.
- *
- * \author Roland Riegel
- */
-
-/**
- * \addtogroup sd_raw_config MMC/SD configuration
- * Preprocessor defines to configure the MMC/SD support.
- */
-
-/**
- * @}
- */
-
-/* commands available in SPI mode */
-
-/* CMD0: response R1 */
-#define CMD_GO_IDLE_STATE 0x00
-/* CMD1: response R1 */
-#define CMD_SEND_OP_COND 0x01
-/* CMD9: response R1 */
-#define CMD_SEND_CSD 0x09
-/* CMD10: response R1 */
-#define CMD_SEND_CID 0x0a
-/* CMD12: response R1 */
-#define CMD_STOP_TRANSMISSION 0x0c
-/* CMD13: response R2 */
-#define CMD_SEND_STATUS 0x0d
-/* CMD16: arg0[31:0]: block length, response R1 */
-#define CMD_SET_BLOCKLEN 0x10
-/* CMD17: arg0[31:0]: data address, response R1 */
-#define CMD_READ_SINGLE_BLOCK 0x11
-/* CMD18: arg0[31:0]: data address, response R1 */
-#define CMD_READ_MULTIPLE_BLOCK 0x12
-/* CMD24: arg0[31:0]: data address, response R1 */
-#define CMD_WRITE_SINGLE_BLOCK 0x18
-/* CMD25: arg0[31:0]: data address, response R1 */
-#define CMD_WRITE_MULTIPLE_BLOCK 0x19
-/* CMD27: response R1 */
-#define CMD_PROGRAM_CSD 0x1b
-/* CMD28: arg0[31:0]: data address, response R1b */
-#define CMD_SET_WRITE_PROT 0x1c
-/* CMD29: arg0[31:0]: data address, response R1b */
-#define CMD_CLR_WRITE_PROT 0x1d
-/* CMD30: arg0[31:0]: write protect data address, response R1 */
-#define CMD_SEND_WRITE_PROT 0x1e
-/* CMD32: arg0[31:0]: data address, response R1 */
-#define CMD_TAG_SECTOR_START 0x20
-/* CMD33: arg0[31:0]: data address, response R1 */
-#define CMD_TAG_SECTOR_END 0x21
-/* CMD34: arg0[31:0]: data address, response R1 */
-#define CMD_UNTAG_SECTOR 0x22
-/* CMD35: arg0[31:0]: data address, response R1 */
-#define CMD_TAG_ERASE_GROUP_START 0x23
-/* CMD36: arg0[31:0]: data address, response R1 */
-#define CMD_TAG_ERASE_GROUP_END 0x24
-/* CMD37: arg0[31:0]: data address, response R1 */
-#define CMD_UNTAG_ERASE_GROUP 0x25
-/* CMD38: arg0[31:0]: stuff bits, response R1b */
-#define CMD_ERASE 0x26
-/* CMD42: arg0[31:0]: stuff bits, response R1b */
-#define CMD_LOCK_UNLOCK 0x2a
-/* CMD58: response R3 */
-#define CMD_READ_OCR 0x3a
-/* CMD59: arg0[31:1]: stuff bits, arg0[0:0]: crc option, response R1 */
-#define CMD_CRC_ON_OFF 0x3b
-
-/* command responses */
-/* R1: size 1 byte */
-#define R1_IDLE_STATE 0
-#define R1_ERASE_RESET 1
-#define R1_ILL_COMMAND 2
-#define R1_COM_CRC_ERR 3
-#define R1_ERASE_SEQ_ERR 4
-#define R1_ADDR_ERR 5
-#define R1_PARAM_ERR 6
-/* R1b: equals R1, additional busy bytes */
-/* R2: size 2 bytes */
-#define R2_CARD_LOCKED 0
-#define R2_WP_ERASE_SKIP 1
-#define R2_ERR 2
-#define R2_CARD_ERR 3
-#define R2_CARD_ECC_FAIL 4
-#define R2_WP_VIOLATION 5
-#define R2_INVAL_ERASE 6
-#define R2_OUT_OF_RANGE 7
-#define R2_CSD_OVERWRITE 7
-#define R2_IDLE_STATE (R1_IDLE_STATE + 8)
-#define R2_ERASE_RESET (R1_ERASE_RESET + 8)
-#define R2_ILL_COMMAND (R1_ILL_COMMAND + 8)
-#define R2_COM_CRC_ERR (R1_COM_CRC_ERR + 8)
-#define R2_ERASE_SEQ_ERR (R1_ERASE_SEQ_ERR + 8)
-#define R2_ADDR_ERR (R1_ADDR_ERR + 8)
-#define R2_PARAM_ERR (R1_PARAM_ERR + 8)
-/* R3: size 5 bytes */
-#define R3_OCR_MASK (0xffffffffUL)
-#define R3_IDLE_STATE (R1_IDLE_STATE + 32)
-#define R3_ERASE_RESET (R1_ERASE_RESET + 32)
-#define R3_ILL_COMMAND (R1_ILL_COMMAND + 32)
-#define R3_COM_CRC_ERR (R1_COM_CRC_ERR + 32)
-#define R3_ERASE_SEQ_ERR (R1_ERASE_SEQ_ERR + 32)
-#define R3_ADDR_ERR (R1_ADDR_ERR + 32)
-#define R3_PARAM_ERR (R1_PARAM_ERR + 32)
-/* Data Response: size 1 byte */
-#define DR_STATUS_MASK 0x0e
-#define DR_STATUS_ACCEPTED 0x05
-#define DR_STATUS_CRC_ERR 0x0a
-#define DR_STATUS_WRITE_ERR 0x0c
-
-#if !SD_RAW_SAVE_RAM
-    
-    /* static data buffer for acceleration */
-    static unsigned char raw_block[512];
-    /* offset where the data within raw_block lies on the card */
-    static unsigned int raw_block_address;
-    #if SD_RAW_WRITE_BUFFERING
-    /* flag to remember if raw_block was written to the card */
-    static unsigned char raw_block_written;
-#endif
-
-#endif
-
-/* private helper functions */
-static void sd_raw_send_byte(unsigned char b);
-static unsigned char sd_raw_rec_byte(void);
-static unsigned char sd_raw_send_command_r1(unsigned char command, unsigned int arg);
-//static unsigned short sd_raw_send_command_r2(unsigned char command, unsigned int arg);
 
 /**
  * \ingroup sd_raw
@@ -157,7 +14,7 @@ static unsigned char sd_raw_send_command_r1(unsigned char command, unsigned int 
  *
  * \returns 0 on failure, 1 on success.
  */
-unsigned char sd_raw_init()
+unsigned char FAT16::sd_raw_init()
 {
 	UART0 * uart = UART0::GetInstance();
 
@@ -271,7 +128,7 @@ unsigned char sd_raw_init()
  *
  * \returns 1 if the card is available, 0 if it is not.
  */
-unsigned char sd_raw_available()
+unsigned char FAT16::sd_raw_available()
 {
     unsigned int i;
     configure_pin_available();
@@ -287,7 +144,7 @@ unsigned char sd_raw_available()
  *
  * \returns 1 if the card is locked, 0 if it is not.
  */
-unsigned char sd_raw_locked()
+unsigned char FAT16::sd_raw_locked()
 {
     return get_pin_locked() == 0x00;
 }
@@ -299,7 +156,7 @@ unsigned char sd_raw_locked()
  * \param[in] b The byte to sent.
  * \see sd_raw_rec_byte
  */
-void sd_raw_send_byte(unsigned char b)
+void FAT16::sd_raw_send_byte(unsigned char b)
 {
     SSPDR = b;
     //S0SPDR = b;
@@ -316,7 +173,7 @@ void sd_raw_send_byte(unsigned char b)
  * \returns The byte which should be read.
  * \see sd_raw_send_byte
  */
-unsigned char sd_raw_rec_byte(void)
+unsigned char FAT16::sd_raw_rec_byte(void)
 {
     /* send dummy data for receiving some */
     //S0SPDR = 0xff;
@@ -335,7 +192,7 @@ unsigned char sd_raw_rec_byte(void)
  * \param[in] arg The argument for command.
  * \returns The command answer.
  */
-unsigned char sd_raw_send_command_r1(unsigned char command, unsigned int arg)
+unsigned char FAT16::sd_raw_send_command_r1(unsigned char command, unsigned int arg)
 {
     unsigned char response;
     unsigned char i;
@@ -371,7 +228,7 @@ unsigned char sd_raw_send_command_r1(unsigned char command, unsigned int arg)
  * \returns The command answer.
  */
 /*
-unsigned short sd_raw_send_command_r2(unsigned char command, unsigned int arg)
+unsigned FAT16::short sd_raw_send_command_r2(unsigned char command, unsigned int arg)
 {
     unsigned short response;
     unsigned char i;
@@ -411,7 +268,7 @@ unsigned short sd_raw_send_command_r2(unsigned char command, unsigned int arg)
  * \returns 0 on failure, 1 on success.
  * \see sd_raw_read_interval, sd_raw_write
  */
-unsigned char sd_raw_read(unsigned int offset, unsigned char* buffer, unsigned short length)
+unsigned char FAT16::sd_raw_read(unsigned int offset, unsigned char* buffer, unsigned short length)
 {
     unsigned int block_address;
     unsigned short block_offset;
@@ -521,7 +378,7 @@ unsigned char sd_raw_read(unsigned int offset, unsigned char* buffer, unsigned s
  * \returns 0 on failure, 1 on success
  * \see sd_raw_read, sd_raw_write
  */
-unsigned char sd_raw_read_interval(unsigned int offset, unsigned char* buffer, unsigned short interval, unsigned short length, sd_raw_interval_handler callback, void* p)
+unsigned char FAT16::sd_raw_read_interval(unsigned int offset, unsigned char* buffer, unsigned short interval, unsigned short length, sd_raw_interval_handler callback, void* p)
 {
     if(!buffer || interval == 0 || length < interval || !callback)
         return 0;
@@ -534,7 +391,7 @@ unsigned char sd_raw_read_interval(unsigned int offset, unsigned char* buffer, u
                      */
             if(!sd_raw_read(offset, buffer, interval))
                 return 0;
-            if(!callback(buffer, offset, p))
+            if(!(GetInstance()->*callback)(buffer, offset, p))
                 break;
             offset += interval;
             length -= interval;
@@ -631,7 +488,7 @@ unsigned char sd_raw_read_interval(unsigned int offset, unsigned char* buffer, u
  * \returns 0 on failure, 1 on success.
  * \see sd_raw_read
  */
-unsigned char sd_raw_write(unsigned int offset, const unsigned char* buffer, unsigned short length)
+unsigned char FAT16::sd_raw_write(unsigned int offset, const unsigned char* buffer, unsigned short length)
 {
     #if SD_RAW_WRITE_SUPPORT
     
@@ -741,7 +598,7 @@ unsigned char sd_raw_write(unsigned int offset, const unsigned char* buffer, uns
  * \returns 0 on failure, 1 on success.
  * \see sd_raw_write
  */
-unsigned char sd_raw_sync()
+unsigned char FAT16::sd_raw_sync()
 {
     #if SD_RAW_WRITE_SUPPORT
         #if SD_RAW_WRITE_BUFFERING
@@ -771,7 +628,7 @@ unsigned char sd_raw_sync()
  * \param[in] info A pointer to the structure into which to save the information.
  * \returns 0 on failure, 1 on success.
  */
-unsigned char sd_raw_get_info(struct sd_raw_info* info)
+unsigned char FAT16::sd_raw_get_info(struct sd_raw_info* info)
 {
     if(!info || !sd_raw_available())
         return 0;
@@ -883,7 +740,7 @@ unsigned char sd_raw_get_info(struct sd_raw_info* info)
     return 1;
 }
 
-void SDoff(void)
+void FAT16::SDoff(void)
 {
     SPI_SS_IODIR &= ~(1<<SPI_SS_PIN);
     PINSEL0 &= ~(0x1500);
@@ -893,7 +750,7 @@ void SDoff(void)
 //Low-level formats a 512MB card
 //Assumes *many* things
 //You must pass this fuction 0xAA to get it to work (safety check)
-char format_card(char make_sure)
+char FAT16::format_card(char make_sure)
 {
 	#define MBR_LOCATION	0x00
 	#define BR_LOCATION		(MBR_LOCATION+0x80000)

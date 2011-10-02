@@ -43,7 +43,7 @@
  * \returns 0 on failure, a partition descriptor on success.
  * \see partition_close
  */
-struct partition_struct* partition_open(device_read_t device_read, device_read_interval_t device_read_interval, device_write_t device_write, int8_t index0)
+FAT16::partition_struct* FAT16::partition_open(device_read_t device_read, device_read_interval_t device_read_interval, device_write_t device_write, int8_t index0)
 {
     struct partition_struct* new_partition = 0;
     uint8_t buffer[0x10];
@@ -53,8 +53,9 @@ struct partition_struct* partition_open(device_read_t device_read, device_read_i
 
     if(index0 >= 0)
     {
-        /* read specified partition table index */
-        if(!device_read(0x01be + index0 * 0x10, buffer, sizeof(buffer)))
+        /* read specified partition table index FAT16::sd_raw_read */
+        if(!(GetInstance()->*device_read)(0x01be + index0 * 0x10, buffer, sizeof(buffer)))
+    	//if(!sd_raw_read(0x01be + index0 * 0x10, buffer, sizeof(buffer)))
             return 0;
 
         /* abort on empty partition entry */
@@ -105,7 +106,7 @@ struct partition_struct* partition_open(device_read_t device_read, device_read_i
  * \returns 0 on failure, 1 on success.
  * \see partition_open
  */
-uint8_t partition_close(struct partition_struct* partition)
+uint8_t FAT16::partition_close(struct partition_struct* partition)
 {
     if(!partition)
         return 0;

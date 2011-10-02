@@ -49,6 +49,8 @@ public:
 private:
     void ScheduleMessage();
     void StatusPacket(const GPSData *gps, char *text);
+    FAT16 * flash;
+    FAT16::fat16_file_struct * handle;
     
     /// Pointer to GPS engine control object.
     GPSLassen *gps;

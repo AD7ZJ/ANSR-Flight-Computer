@@ -68,10 +68,10 @@ Log.o: Log.cpp main.h ../arm/arm7lib/armlib.h ../arm/arm7lib/lpc214x.h \
  ../arm/arm7lib/Optrex30.h ../arm/arm7lib/OSD0201QILK.h \
  ../arm/arm7lib/AX25.h ../arm/arm7lib/Base64Encoder.h \
  ../arm/arm7lib/NMEA.h ../arm/arm7lib/MIC-E.h ../arm/arm7lib/UUEncoder.h \
- AFSK.h Log.h Engineering.h APRSBeacon.h IOPorts.h partition.h \
+ fat16_config.h fat16.h sd_raw_config.h AFSK.h Log.h Engineering.h \
+ APRSBeacon.h IOPorts.h \
  /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/include/stdint.h \
- /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/../../../../arm-none-eabi/include/stdint.h \
- fat16.h fat16_config.h sd_raw.h sd_raw_config.h rootdir.h
+ /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/../../../../arm-none-eabi/include/stdint.h
 
 main.h:
 
@@ -293,6 +293,12 @@ main.h:
 
 ../arm/arm7lib/UUEncoder.h:
 
+fat16_config.h:
+
+fat16.h:
+
+sd_raw_config.h:
+
 AFSK.h:
 
 Log.h:
@@ -303,18 +309,6 @@ APRSBeacon.h:
 
 IOPorts.h:
 
-partition.h:
-
 /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/include/stdint.h:
 
 /home/elijah/CodeSourcery/Sourcery_G++_Lite/bin/../lib/gcc/arm-none-eabi/4.5.2/../../../../arm-none-eabi/include/stdint.h:
-
-fat16.h:
-
-fat16_config.h:
-
-sd_raw.h:
-
-sd_raw_config.h:
-
-rootdir.h:

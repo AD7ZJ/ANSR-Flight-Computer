@@ -7,24 +7,13 @@
 //#ifndef SD_RAW_CONFIG_H
 //#define SD_RAW_CONFIG_H
 
-//#define SS_PORT_1
-//#define SPI_SS_PIN	24
 #define SS_PORT_0
 #define SPI_SS_PIN	20
 
-//SPI Chip Select Defines for SD Access
-/*#ifdef SS_PORT_1
-	#define	SPI_SS_IODIR	IODIR1
-	#define	SPI_SS_IOCLR	IOCLR1
-	#define	SPI_SS_IOSET	IOSET1  
-	#define SPI_SS_IOPIN	IOPIN1
-#endif */
-//#ifdef	SS_PORT_0
-	#define	SPI_SS_IODIR	FIO0DIR
-	#define	SPI_SS_IOCLR	FIO0CLR
-	#define	SPI_SS_IOSET	FIO0SET
-	#define	SPI_SS_IOPIN	FIO0PIN
-//#endif
+#define	SPI_SS_IODIR	FIO0DIR
+#define	SPI_SS_IOCLR	FIO0CLR
+#define	SPI_SS_IOSET	FIO0SET
+#define	SPI_SS_IOPIN	FIO0PIN
 
 /* defines for customisation of sd/mmc port access */
 #define configure_pin_mosi() 	PINSEL1 |= (1 << 7)

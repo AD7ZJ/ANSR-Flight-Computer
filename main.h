@@ -16,7 +16,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *               (c) Copyright, 2001-2008, Michael Gray                    *
+ *               (c) Copyright, 2011, ANSR                                 *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -51,7 +51,8 @@
  */
 
 #include "armlib.h"
-
+#include "fat16_config.h"
+#include "fat16.h"
 #include "AFSK.h"
 #include "Log.h"
 #include "Engineering.h"
@@ -59,11 +60,11 @@
 #include "IOPorts.h"
 
 #include <string.h>
-#include "partition.h"
-#include "fat16.h"
-#include "fat16_config.h"
-#include "sd_raw.h"
-#include "rootdir.h"
+#include <stdint.h>
+//#include "partition.h"
+
+//#include "sd_raw.h"
+//#include "rootdir.h"
 
 #endif  // #ifndef MAIN_H
 
