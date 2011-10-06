@@ -293,9 +293,9 @@ public:
 	#endif
 
 	/* private helper functions */
-	static void sd_raw_send_byte(unsigned char b);
-	static unsigned char sd_raw_rec_byte(void);
-	static unsigned char sd_raw_send_command_r1(unsigned char command, unsigned int arg);
+	void sd_raw_send_byte(unsigned char b);
+	unsigned char sd_raw_rec_byte(void);
+	unsigned char sd_raw_send_command_r1(unsigned char command, unsigned int arg);
 	//static unsigned short sd_raw_send_command_r2(unsigned char command, unsigned int arg);
 
 

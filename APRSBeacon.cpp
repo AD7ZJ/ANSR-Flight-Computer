@@ -288,15 +288,19 @@ void APRSBeacon::Run()
 
     fat_initialize();
 
-    uint8_t testString[] = "This is a test";
+    uint8_t testString[] = "This is a test, does it work?  ";
 
     //struct fat16_file_struct* handle;
-	handle = flash->root_open_new("test10.txt");
+	//handle = flash->root_open_new("test11.txt");
+	handle = flash->root_open("test.txt");
 	flash->sd_raw_sync();
-	written = flash->fat16_write_file(handle, testString, 14);
+	written = flash->fat16_write_file(handle, testString, 32);
+	flash->sd_raw_sync();
 
 	if(written < 0)
 		UART0::GetInstance()->WriteLine ("Failed to write file");
+	if(written == 0)
+		UART0::GetInstance()->WriteLine("Disk full or file not writeable");
 
 	flash->sd_raw_sync();
 
