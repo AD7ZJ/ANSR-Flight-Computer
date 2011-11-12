@@ -42,15 +42,14 @@ public:
     APRSBeacon();
     
     void Run();
-    void fat_initialize();
 
     static APRSBeacon *GetInstance();
     
 private:
     void ScheduleMessage();
     void StatusPacket(const GPSData *gps, char *text);
-    FAT16 * flash;
-    FAT16::fat16_file_struct * handle;
+    //FAT16 * flash;
+    //FAT16::fat16_file_struct * handle;
     
     /// Pointer to GPS engine control object.
     GPSLassen *gps;

@@ -70,11 +70,11 @@ UADEFS =
 
 # List C source files here
 CSRC  = CRunTime.c 
+CSRC += fatfs/ff.c fatfs/mmc.c
 
 # List CPP source files here
 CPPSRC = AFSK.cpp main.cpp Engineering.cpp APRSBeacon.cpp IOPorts.cpp Log.cpp 
-# SD card stuff
-CPPSRC += rootdir.cpp fat16.cpp partition.cpp sd_raw.cpp
+
 
 # List ASM source files here
 ASRC = crt.s

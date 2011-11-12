@@ -51,8 +51,6 @@
  */
 
 #include "armlib.h"
-#include "fat16_config.h"
-#include "fat16.h"
 #include "AFSK.h"
 #include "Log.h"
 #include "Engineering.h"
@@ -65,6 +63,11 @@
 
 //#include "sd_raw.h"
 //#include "rootdir.h"
+
+extern "C" {
+	#include "fatfs/ff.h"
+	#include "fatfs/diskio.h"
+}
 
 #endif  // #ifndef MAIN_H
 

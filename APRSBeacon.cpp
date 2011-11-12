@@ -70,6 +70,15 @@ void CMX867A::SPIWrite(uint8_t data)
     SPI0::GetInstance()->Write(data);
 }
 
+/**
+ * Override the timer tick callback function
+ */
+void TimerBase::TimerTickCallback()
+{
+	IOPorts::RadioPTT(true);
+	disk_timerproc();
+}
+
 /// Reserve memory for singleton object.
 static APRSBeacon APRSBeaconSingletonObject;
 
@@ -89,7 +98,6 @@ APRSBeacon::APRSBeacon()
     this->peakAltitude = 0;
     this->startGPSTime = 0;
     this->statusLEDOffTick = 0;
-    this->flash = FAT16::GetInstance();
 }
 
 /**
@@ -202,32 +210,26 @@ void APRSBeacon::ScheduleMessage()
 }
 
 /**
- * Initialize the FAT library and SD card
- */
-void APRSBeacon::fat_initialize() {
-	UART0 * uart = UART0::GetInstance();
-	if(!flash->sd_raw_init())
-	{
-		uart->WriteLine("SD Init Error\n\r");
-		return;
-	}
+ * Callback function to run at each 1ms timer tick
+ *
+void APRSBeacon::timerTickCallback()
+{
+	int i = 0;
 
-	if(flash->openroot())
-	{
-		uart->WriteLine("SD OpenRoot Error\n\r");
-	}
-	return;
+
 }
-
+*/
 
 /**
  * Start and run the mission application.
  */
 void APRSBeacon::Run()
 {
-	int written;
     // Set the system clock to the minimum speed required for USB operation.
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
+
+    // add a callback function to the timer tick
+    //Timer1::GetInstance()->SetCallback(reinterpret_cast<void*>(&APRSBeacon::timerTickCallback));
 
     // Set the GPIO to the default state.
     IOPorts::Enable();
@@ -271,38 +273,19 @@ void APRSBeacon::Run()
     IOPorts::RadioPower(true);
     SystemControl::Sleep(100);
 
-    //FIO0DIR |= (1<<20);
-
     // Show a startup message on the serial port.
-    UART0::GetInstance()->WriteLine ("System booted");
+    UART0::GetInstance()->WriteLine ("System booted, yay!");
 
     // Turn off the LEDs.
     IOPorts::StatusLED (IOPorts::LEDYellow, false);
 
     // Transmit a startup message.
-    this->afsk->Transmit (">APRS Beacon v1.1");
+    this->afsk->Transmit (">ANSR Flight Computer v0.1");
 
+    // test malloc()
     int * test;
     test = (int*)malloc(4);
     *test = 0xdefac8ed;
-
-    fat_initialize();
-
-    uint8_t testString[] = "This is a test, does it work?  ";
-
-    //struct fat16_file_struct* handle;
-	//handle = flash->root_open_new("test11.txt");
-	handle = flash->root_open("test.txt");
-	flash->sd_raw_sync();
-	written = flash->fat16_write_file(handle, testString, 32);
-	flash->sd_raw_sync();
-
-	if(written < 0)
-		UART0::GetInstance()->WriteLine ("Failed to write file");
-	if(written == 0)
-		UART0::GetInstance()->WriteLine("Disk full or file not writeable");
-
-	flash->sd_raw_sync();
 
     //Log::GetInstance()->SystemBooted();
 
@@ -315,7 +298,7 @@ void APRSBeacon::Run()
         // Update the waveform state machine as required.
         this->afsk->Update();
 
-
+        IOPorts::RadioPTT(false);
 
         if (!this->afsk->IsTransmit())
             ScheduleMessage();

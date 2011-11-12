@@ -62,13 +62,15 @@ void Engineering::Enable()
  */
 void Engineering::Menu()
 {
-    uart->WriteLine ("APRS Beacon Engineering Console");
-    
-    uart->WriteLine ("(S)tatus");
+    uart->WriteLine ("ANSR Flight Computer Engineering Console");
+    //uart->WriteLine ("(S)tatus");
     uart->WriteLine ("(1) Radio Power");
     uart->WriteLine ("(2) Radio PTT");
     uart->WriteLine ("(3) Radio Freq");
-    uart->WriteLine ("Cycle (d)ac output 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.3 VDC");
+    uart->WriteLine ("Re(b)oot");
+    uart->WriteLine ("Trans(m)it");
+    uart->WriteLine ("(n) MIC-E Test");
+    //uart->WriteLine ("Cycle (d)ac output 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.3 VDC");
     uart->WriteLine ("(h)elp");
     uart->WriteLine("");
 }
