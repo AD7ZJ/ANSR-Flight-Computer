@@ -12,7 +12,7 @@
 /-------------------------------------------------------------------------*/
 typedef unsigned long uint32_t;
 
-#define SPI_SS_PIN	20
+#define SPI_SS_PIN		20
 #define	SPI_SS_IODIR	FIO0DIR
 #define	SPI_SS_IOCLR	FIO0CLR
 #define	SPI_SS_IOSET	FIO0SET
@@ -21,52 +21,20 @@ typedef unsigned long uint32_t;
 
 #define SSP_CH	1	/* SSP channel to use (0:SSP0, 1:SSP1) */
 
-#define	CCLK		100000000UL	/* cclk frequency [Hz] */
-#define PCLK_SSP	50000000UL	/* PCLK frequency for SSP [Hz] */
-#define SCLK_FAST	25000000UL	/* SCLK frequency under normal operation [Hz] */
-#define	SCLK_SLOW	400000UL	/* SCLK frequency under initialization [Hz] */
-
 // TBD: Is this right?
-#define	INS			(!((SPI_SS_IOPIN&(1<<SPI_SS_PIN))>>SPI_SS_PIN))	/* Socket status (true:Inserted, false:Empty) */
+#define	INS			((SPI_SS_IOPIN&(1<<SPI_SS_PIN))>>SPI_SS_PIN)	/* Socket status (true:Inserted, false:Empty) */
 #define	WP			0 /* Card write protection (true:yes, false:no) */
 
-#if SSP_CH == 0
-#define	SSPxDR		SSP0DR
-#define	SSPxSR		SSP0SR
-#define	SSPxCR0		SSP0CR0
-#define	SSPxCR1		SSP0CR1
-#define	SSPxCPSR	SSP0CPSR
-#define	CS_LOW()	{SPI_SS_IOCLR |= (1 << SPI_SS_PIN);}  // {FIO0CLR2 = _BV(2);}	/* Set P0.18 low */
-#define	CS_HIGH()	{SPI_SS_IOSET |= (1 << SPI_SS_PIN);}  // {FIO0SET2 = _BV(2);}	/* Set P0.18 high */
-#define PCSSPx		PCSSP0
-#define	PCLKSSPx	PCLK_SSP0
-#elif SSP_CH == 1
 #define	SSPxDR		SSPDR
 #define	SSPxSR		SSPSR
 #define	SSPxCR0		SSPCR0
 #define	SSPxCR1		SSPCR1
 #define	SSPxCPSR	SSPCPSR
-#define	CS_LOW()	{SPI_SS_IOCLR |= (1 << SPI_SS_PIN);}  //{FIO0CLR0 = _BV(6);}	/* Set P0.6 low */
-#define	CS_HIGH()	{SPI_SS_IOSET |= (1 << SPI_SS_PIN);}  //{FIO0SET0 = _BV(6);}	/* Set P0.6 high */
-#define PCSSPx		PCSSP1
-#define	PCLKSSPx	PCLK_SSP1
-#endif
+#define	CS_LOW()	{SPI_SS_IOCLR |= (1 << SPI_SS_PIN);}
+#define	CS_HIGH()	{SPI_SS_IOSET |= (1 << SPI_SS_PIN);}
 
-#if PCLK_SSP * 1 == CCLK
-#define PCLKDIV_SSP	PCLKDIV_1
-#elif PCLK_SSP * 2 == CCLK
-#define PCLKDIV_SSP	PCLKDIV_2
-#elif PCLK_SSP * 4 == CCLK
-#define PCLKDIV_SSP	PCLKDIV_4
-#elif PCLK_SSP * 8 == CCLK
-#define PCLKDIV_SSP	PCLKDIV_8
-#else
-#error Invalid clock frequency.
-#endif
-
-
-#define FCLK_FAST() { SSPxCPSR = (PCLK_SSP / SCLK_FAST) & ~1; }
-#define FCLK_SLOW() { SSPxCPSR = (PCLK_SSP / SCLK_SLOW) & ~1; }
+#define FCLK_FAST() { SSPCR0 = 0x0507; }
+#define FCLK_SLOW() { SSPCR0 = 0x0E07; }
 
 
 
@@ -146,15 +114,16 @@ void rcvr_spi_multi (
 {
 	UINT n = 512;
 	WORD d;
+	UINT savedCR0 = SSPxCR0;
 
 
-	SSPxCR0 = 0x000F;				/* Select 16-bit mode */
+	SSPxCR0 |= 0x000F;				/* Select 16-bit mode */
 
 	for (n = 0; n < 8; n++)			/* Push 8 frames into pipeline  */
 		SSPxDR = 0xFFFF;
 	btr -= 16;
 	while (btr) {					/* Receive the data block into buffer */
-		while (!(SSPxSR & _BV(2))) ;
+		while (!(SSPxSR & 0x04)) ;
 		d = SSPxDR;
 		SSPxDR = 0xFFFF;
 		*buff++ = d >> 8;
@@ -162,13 +131,13 @@ void rcvr_spi_multi (
 		btr -= 2;
 	}
 	for (n = 0; n < 8; n++) {		/* Pop remaining frames from pipeline */
-		while (!(SSPxSR & _BV(2))) ;
+		while (!(SSPxSR & 0x04)) ;
 		d = SSPxDR;
 		*buff++ = d >> 8;
 		*buff++ = d;
 	}
 
-	SSPxCR0 = 0x0007;				/* Select 8-bit mode */
+	SSPxCR0 = savedCR0;				/* Select 8-bit mode */
 }
 
 
@@ -181,9 +150,10 @@ void xmit_spi_multi (
 {
 	UINT n = 512;
 	WORD d;
+	UINT savedCR0 = SSPxCR0;
 
 
-	SSPxCR0 = 0x000F;			/* Select 16-bit mode */
+	SSPxCR0 |= 0x000F;			/* Select 16-bit mode */
 
 	for (n = 0; n < 8; n++) {	/* Push 8 frames into pipeline  */
 		d = *buff++;
@@ -194,15 +164,15 @@ void xmit_spi_multi (
 	do {						/* Transmit data block */
 		d = *buff++;
 		d = (d << 8) | *buff++;
-		while (!(SSPxSR & _BV(2))) ;
+		while (!(SSPxSR & 0x04)) ;
 		SSPxDR; SSPxDR = d;
 	} while (btx -= 2);
 	for (n = 0; n < 8; n++) {
-		while (!(SSPxSR & _BV(2))) ;
+		while (!(SSPxSR & 0x04)) ;
 		SSPxDR;
 	}
 
-	SSPxCR0 = 0x0007;			/* Select 8-bit mode */
+	SSPxCR0 = savedCR0;			/* Select 8-bit mode and return to where it was */
 }
 
 
@@ -268,15 +238,17 @@ int select (void)	/* 1:OK, 0:Timeout */
 static
 void power_on (void)	/* Enable SSP module and attach it to I/O pads */
 {
-    SSPCR0 = 0x0E07;  // 8 bits/transfer, SPI mode, CPOL CPHA, SCR,
-    SSPCPSR = 0x04;
-    SSPCR1 = 0x02;
+	PCONP |= (1 << 10);	 /* Make sure the SPI1 interface is turned on  */
 
 	SPI_SS_IODIR |= (1<<SPI_SS_PIN);  /* Configure SS pin as an output */
 	PINSEL1 |= (1 << 7); /* configure MOSI */
 	PINSEL1 |= (1 << 5); /* configure MISO */
 	PINSEL1 |= (1 << 3); /* configure sck  */
 	CS_HIGH();					/* Set CS# high */
+
+    SSPCR0 = 0x0E07;  // 8 bits/transfer, SPI mode, CPOL CPHA, SCR,
+    SSPCPSR = 0x04;
+    SSPCR1 = 0x02;
 }
 
 
@@ -700,7 +672,7 @@ void disk_timerproc (void)
 	if (INS)	/* Card is in socket */
 		s &= ~STA_NODISK;
 	else		/* Socket empty */
-		s |= (STA_NODISK | STA_NOINIT);
+		s |= (STA_NODISK); //| STA_NOINIT);
 	Stat = s;
 }
 

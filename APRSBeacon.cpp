@@ -225,6 +225,13 @@ void APRSBeacon::timerTickCallback()
  */
 void APRSBeacon::Run()
 {
+	FATFS Fatfs[_VOLUMES];
+	FIL File;				/* File objects */
+	FRESULT res;
+	UINT numBytes;
+	char buffer[512];
+	char writeBuffer[] = "Test writing to a file... if you can read this, yay!";
+
     // Set the system clock to the minimum speed required for USB operation.
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
 
@@ -286,6 +293,29 @@ void APRSBeacon::Run()
     int * test;
     test = (int*)malloc(4);
     *test = 0xdefac8ed;
+
+    // Test FatFS! //
+    if(f_mount(0, &Fatfs[0]) != FR_OK)
+    	UART0::GetInstance()->WriteLine("Failed to mount SD card");
+
+    DSTATUS driveStatus = disk_initialize(0);
+
+    res = f_open(&File, "test.txt", FA_OPEN_EXISTING | FA_WRITE);
+    if(res != FR_OK)
+    	UART0::GetInstance()->WriteLine("Failed to open file on drive 0");
+    //res = f_read(&File, buffer, 512, &numBytes);
+    res = f_write(&File, writeBuffer, 60, &numBytes);
+    if(res != FR_OK)
+    	UART0::GetInstance()->WriteLine("Failed to write file on drive 0");
+
+    //UART0::GetInstance()->WriteLine("Read the following from test.txt:");
+    //UART0::GetInstance()->WriteLine(static_cast<const char *>(buffer));
+
+    /* Close open files */
+    f_close(&File);
+
+    /* Unregister work area prior to discard it */
+    f_mount(0, NULL);
 
     //Log::GetInstance()->SystemBooted();
 
