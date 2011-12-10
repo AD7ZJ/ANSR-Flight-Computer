@@ -68,6 +68,8 @@ private:
     
     /// System timer value to turn off GPS status tick LED.
     uint32_t statusLEDOffTick;
+
+    uint32_t millisecondTimer;
 };
 
 /** @} */

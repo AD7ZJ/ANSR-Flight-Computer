@@ -73,11 +73,15 @@ void CMX867A::SPIWrite(uint8_t data)
 /**
  * Override the timer tick callback function
  */
-void TimerBase::TimerTickCallback()
-{
-	IOPorts::RadioPTT(true);
-	disk_timerproc();
-}
+//void TimerBase::TimerTickCallback()
+//{
+	//IOPorts::RadioPTT(true);
+	//disk_timerproc();
+	//if(++msElapsed >= 1000) {
+		//IOPorts::RadioPTT(true);
+		//msElapsed = 0;
+	//}
+//}
 
 /// Reserve memory for singleton object.
 static APRSBeacon APRSBeaconSingletonObject;
@@ -210,33 +214,17 @@ void APRSBeacon::ScheduleMessage()
 }
 
 /**
- * Callback function to run at each 1ms timer tick
- *
-void APRSBeacon::timerTickCallback()
-{
-	int i = 0;
-
-
-}
-*/
-
-/**
  * Start and run the mission application.
  */
 void APRSBeacon::Run()
 {
-	FATFS Fatfs[_VOLUMES];
-	FIL File;				/* File objects */
-	FRESULT res;
-	UINT numBytes;
-	char buffer[512];
-	char writeBuffer[] = "Test writing to a file... if you can read this, yay!";
+	int32_t tempF;
+	int32_t count = 0;
+	char tempBuffer[20];
+	UINT numChars;
 
     // Set the system clock to the minimum speed required for USB operation.
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
-
-    // add a callback function to the timer tick
-    //Timer1::GetInstance()->SetCallback(reinterpret_cast<void*>(&APRSBeacon::timerTickCallback));
 
     // Set the GPIO to the default state.
     IOPorts::Enable();
@@ -290,11 +278,11 @@ void APRSBeacon::Run()
     this->afsk->Transmit (">ANSR Flight Computer v0.1");
 
     // test malloc()
-    int * test;
-    test = (int*)malloc(4);
-    *test = 0xdefac8ed;
+    //int * test;
+    //test = (int*)malloc(4);
+    //*test = 0xdefac8ed;
 
-    // Test FatFS! //
+    /* Test FatFS! //
     if(f_mount(0, &Fatfs[0]) != FR_OK)
     	UART0::GetInstance()->WriteLine("Failed to mount SD card");
 
@@ -308,16 +296,22 @@ void APRSBeacon::Run()
     if(res != FR_OK)
     	UART0::GetInstance()->WriteLine("Failed to write file on drive 0");
 
+	*/
+
     //UART0::GetInstance()->WriteLine("Read the following from test.txt:");
     //UART0::GetInstance()->WriteLine(static_cast<const char *>(buffer));
 
     /* Close open files */
-    f_close(&File);
+    //f_close(&File);
 
     /* Unregister work area prior to discard it */
-    f_mount(0, NULL);
-
+    //f_mount(0, NULL);
     //Log::GetInstance()->SystemBooted();
+
+
+	// instantiate the SDLogger class
+	//SDLogger tempLogger;
+	//tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
 
     for (;;)
     {
@@ -328,10 +322,22 @@ void APRSBeacon::Run()
         // Update the waveform state machine as required.
         this->afsk->Update();
 
-        IOPorts::RadioPTT(false);
+        //IOPorts::RadioPTT(false);
 
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
+
+		//sprintf(tempBuffer, "Went through the loop %ld times", count);
+        //UART0::GetInstance()->WriteLine(static_cast<const char *>(tempBuffer));
+        //count++;
+        /*/get the temp every second
+        //if((Timer1::GetInstance()->GetTick() % 1000) == 0) {
+        	//IOPorts::RadioPTT(true);
+        	//tempF = LM92::GetInstance()->ReadTempF();
+        	// write the temperature out to the SD card
+        	//numChars = sprintf(tempBuffer, "%0.2f degrees F\n", (float)tempF / 10);
+        	//tempLogger.Append(tempBuffer, numChars);
+        } */
 
     } // END for
 }

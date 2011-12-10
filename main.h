@@ -56,13 +56,10 @@
 #include "Engineering.h"
 #include "APRSBeacon.h"
 #include "IOPorts.h"
+#include "SDLogger.h"
 
 #include <string.h>
 #include <stdint.h>
-//#include "partition.h"
-
-//#include "sd_raw.h"
-//#include "rootdir.h"
 
 extern "C" {
 	#include "fatfs/ff.h"
