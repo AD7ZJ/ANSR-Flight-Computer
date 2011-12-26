@@ -73,15 +73,15 @@ void CMX867A::SPIWrite(uint8_t data)
 /**
  * Override the timer tick callback function
  */
-//void TimerBase::TimerTickCallback()
-//{
-	//IOPorts::RadioPTT(true);
+void TimerBase::TimerTickCallback()
+{
+	IOPorts::RadioPTT(true);
 	//disk_timerproc();
 	//if(++msElapsed >= 1000) {
 		//IOPorts::RadioPTT(true);
 		//msElapsed = 0;
 	//}
-//}
+}
 
 /// Reserve memory for singleton object.
 static APRSBeacon APRSBeaconSingletonObject;
@@ -241,7 +241,7 @@ void APRSBeacon::Run()
     //SPI1::GetInstance()->Enable(SPI1::MaxClock, SPI1::DataSize_8Bits, SPI1::CPOL0_CPHA0);
 
     // I2C Bus 0 is the temp sensor, real time clock, and 3D MEMS sensor.
-    //I2C0::GetInstance()->Enable();
+    I2C0::GetInstance()->Enable();
 
     // Enable and set the output DAC voltage to 0 VDC.
     DAC::GetInstance()->Enable();
@@ -251,7 +251,7 @@ void APRSBeacon::Run()
     CMX867A::GetInstance()->Enable();
 
     // Temperature sensor.
-    //LM92::GetInstance()->Enable();
+    LM92::GetInstance()->Enable();
 
     // Setup the flash memory for logging.
     //Log::GetInstance()->Enable();
@@ -262,7 +262,7 @@ void APRSBeacon::Run()
 
     // Objects used for the application
     this->afsk = AFSK::GetInstance();
-    //this->gps = GPSLassen::GetInstance();
+    this->gps = GPSLassen::GetInstance();
 
     // Turn on the radio and give it time to boot.
     IOPorts::RadioPower(true);
@@ -310,8 +310,8 @@ void APRSBeacon::Run()
 
 
 	// instantiate the SDLogger class
-	//SDLogger tempLogger;
-	//tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
+	SDLogger tempLogger;
+	tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
 
     for (;;)
     {
@@ -327,18 +327,19 @@ void APRSBeacon::Run()
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
 
-		//sprintf(tempBuffer, "Went through the loop %ld times", count);
-        //UART0::GetInstance()->WriteLine(static_cast<const char *>(tempBuffer));
-        //count++;
-        /*/get the temp every second
-        //if((Timer1::GetInstance()->GetTick() % 1000) == 0) {
+        //get the temp every second
+        if((Timer1::GetInstance()->GetTick() % 1000) == 0) {
         	//IOPorts::RadioPTT(true);
-        	//tempF = LM92::GetInstance()->ReadTempF();
+        	tempF = LM92::GetInstance()->ReadTempF();
         	// write the temperature out to the SD card
-        	//numChars = sprintf(tempBuffer, "%0.2f degrees F\n", (float)tempF / 10);
-        	//tempLogger.Append(tempBuffer, numChars);
-        } */
+        	numChars = sprintf(tempBuffer, "%0.2f degrees F\n", (float)tempF / 10);
+        	tempLogger.Append(tempBuffer, numChars);
+
+        	// write to the serial port as well
+        	UART0::GetInstance()->WriteLine(static_cast<const char *>(tempBuffer));
+        }
 
     } // END for
 }
+
 
