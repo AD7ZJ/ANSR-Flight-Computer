@@ -54,7 +54,7 @@ void Engineering::Enable()
 {
     this->uart = UART0::GetInstance();
     
-    this->gps = GPSLassen::GetInstance();
+    this->gps = GPSNmea::GetInstance();
 }
 
 /**
@@ -70,6 +70,7 @@ void Engineering::Menu()
     uart->WriteLine ("Re(b)oot");
     uart->WriteLine ("Trans(m)it");
     uart->WriteLine ("(n) MIC-E Test");
+    uart->WriteLine ("System build time and (d)ate");
     //uart->WriteLine ("Cycle (d)ac output 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.3 VDC");
     uart->WriteLine ("(h)elp");
     uart->WriteLine("");
@@ -252,18 +253,12 @@ void Engineering::ProcessCommand()
             case 't':
                 sprintf (buffer, "%ld", LM92::GetInstance()->ReadTempF());
                 uart->WriteLine (buffer);                
-                break;                
-                
-            case 'i':
-                uart->WriteLine (this->gps->Version());
-                break;                
-                       
-            /*case 'q':
-            	if(!sd_raw_init())
-            	{
-            		uart->WriteLine("SD Init Error\n\r");
-            	}
-            	break; */
+                break;
+
+            case 'd':
+            	uart->WriteLine("Built: %s %s", __DATE__, __TIME__);
+            	break;
+
             default:
                 uart->WriteLine ("Unknown command.  Press 'h' for help.");
                 break;

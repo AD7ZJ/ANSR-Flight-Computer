@@ -57,6 +57,7 @@
 #include "APRSBeacon.h"
 #include "IOPorts.h"
 #include "SDLogger.h"
+#include "GPSNmea.h"
 
 #include <string.h>
 #include <stdint.h>

@@ -27,6 +27,9 @@
 #ifndef ENGINEERING_H
 #define ENGINEERING_H
 
+//FIXME: remove once this is rolled into the armlib
+#include "GPSNmea.h"
+
 /**
  *  @defgroup application APRS Beacon Application
  *
@@ -54,7 +57,7 @@ private:
     UART0 *uart;
 
     /// Pointer to GPS engine control object.
-    GPSLassen *gps;
+    GPSNmea *gps;
 
     /// Flag that indicates the radio is powered on.
     bool_t radioPower;

@@ -27,6 +27,8 @@
 #ifndef APRSBEACON_H
 #define APRSBEACON_H
 
+//FIXME: remove once this is rolled into the armlib
+#include "GPSNmea.h"
 /**
  *  @defgroup application APRS Beacon Application
  *
@@ -52,7 +54,7 @@ private:
     //FAT16::fat16_file_struct * handle;
     
     /// Pointer to GPS engine control object.
-    GPSLassen *gps;
+    GPSNmea *gps;
     
     /// Pointer to the engineering control object.
     Engineering *eng;

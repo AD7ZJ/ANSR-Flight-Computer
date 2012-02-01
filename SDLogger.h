@@ -47,10 +47,11 @@ class SDLogger
 public:
 	SDLogger();
 
-    void Enable(const char * fileName, uint8_t mode);
-    void Write();
-    void Read();
-    void Append(char * buffer, UINT byteCount);
+    bool_t Enable(const char * fileName, uint8_t mode);
+    bool_t Write();
+    bool_t Read();
+    bool_t Append(char * buffer, UINT byteCount);
+    bool_t fSync();
 
 private:
     void MICEncoderTestCase (GPSData *gps, uint32_t testCase);

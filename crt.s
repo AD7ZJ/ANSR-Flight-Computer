@@ -66,7 +66,7 @@ Vectors:
     ldr   pc,_pabt                  // program abort - _pabt
     ldr   pc,_dabt                  // data abort - _dabt
     nop                             // reserved
-    ldr pc, irq_addr           // IRQ - read the VIC
+    ldr pc, irq_addr                // IRQ - read the VIC
     ldr   pc,_fiq                   // FIQ - _fiq
 
 _undf:  .word __undf                    // undefined

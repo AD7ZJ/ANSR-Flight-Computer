@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------*/
-/* LPCXpresso176x: MMCv3/SDv1/SDv2 (SPI mode) control module              */
+/* LPC2148: MMCv3/SDv1/SDv2 (SPI mode) control module                     */
 /*------------------------------------------------------------------------*/
 /*
 /  Copyright (C) 2011, ChaN, all right reserved.
@@ -99,8 +99,11 @@ BYTE xchg_spi (
 	BYTE dat	/* Data to send */
 )
 {
+	// wait while the TX FIFO is full
+	while (!(SSPxSR & 0x02)) ;
 	SSPxDR = dat;
-	while (SSPxSR & 0x10) ;
+	// wait while the RX FIFO is empty
+	while (!(SSPxSR & 0x04)) ;
 	return SSPxDR;
 }
 

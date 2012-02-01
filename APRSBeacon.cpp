@@ -26,16 +26,16 @@
 
 #include "main.h"
 
-bool_t GPSLassen::HasData()
+bool_t GPSNmea::HasData()
 {
     return UART1::GetInstance()->IsCharReady();
 }
-uint8_t GPSLassen::ReadData()
+uint8_t GPSNmea::ReadData()
 {
     return UART1::GetInstance()->ReadChar();
 }
 
-void GPSLassen::WriteData(uint8_t data)
+void GPSNmea::WriteData(uint8_t data)
 {
     UART1::GetInstance()->WriteChar (data);
 }
@@ -76,7 +76,7 @@ void CMX867A::SPIWrite(uint8_t data)
 void TimerBase::TimerTickCallback()
 {
 	IOPorts::RadioPTT(true);
-	//disk_timerproc();
+	disk_timerproc();
 	//if(++msElapsed >= 1000) {
 		//IOPorts::RadioPTT(true);
 		//msElapsed = 0;
@@ -219,8 +219,7 @@ void APRSBeacon::ScheduleMessage()
 void APRSBeacon::Run()
 {
 	int32_t tempF;
-	int32_t count = 0;
-	char tempBuffer[20];
+	char tempBuffer[40];
 	UINT numChars;
 
     // Set the system clock to the minimum speed required for USB operation.
@@ -234,7 +233,7 @@ void APRSBeacon::Run()
 
     // UART 0 is the console serial port, UART 1 is the GPS engine.
     UART0::GetInstance()->Enable(UART0::BaudRate57600);
-    //UART1::GetInstance()->Enable(UART1::BaudRate9600, UART1::Control8O1);
+    UART1::GetInstance()->Enable(UART1::BaudRate9600, UART1::Control8N1);
 
     // SPI 0 is the CMX867A MODEM, SPI 1 is the M25P80 flash memory.
     SPI0::GetInstance()->Enable();
@@ -256,20 +255,23 @@ void APRSBeacon::Run()
     // Setup the flash memory for logging.
     //Log::GetInstance()->Enable();
 
+    // Enable the RTC
+    RTC::GetInstance()->Enable();
+
     // Get the engineering control object and enable it.
     eng = Engineering::GetInstance();
     eng->Enable();
 
     // Objects used for the application
     this->afsk = AFSK::GetInstance();
-    this->gps = GPSLassen::GetInstance();
+    this->gps = GPSNmea::GetInstance();
 
     // Turn on the radio and give it time to boot.
     IOPorts::RadioPower(true);
-    SystemControl::Sleep(100);
+    SystemControl::Sleep(1000);
 
     // Show a startup message on the serial port.
-    UART0::GetInstance()->WriteLine ("System booted, yay!");
+    UART0::GetInstance()->WriteLine (">ANSR Flight Computer v0.1 booted!");
 
     // Turn off the LEDs.
     IOPorts::StatusLED (IOPorts::LEDYellow, false);
@@ -282,36 +284,14 @@ void APRSBeacon::Run()
     //test = (int*)malloc(4);
     //*test = 0xdefac8ed;
 
-    /* Test FatFS! //
-    if(f_mount(0, &Fatfs[0]) != FR_OK)
-    	UART0::GetInstance()->WriteLine("Failed to mount SD card");
-
-    DSTATUS driveStatus = disk_initialize(0);
-
-    res = f_open(&File, "test.txt", FA_OPEN_EXISTING | FA_WRITE);
-    if(res != FR_OK)
-    	UART0::GetInstance()->WriteLine("Failed to open file on drive 0");
-    //res = f_read(&File, buffer, 512, &numBytes);
-    res = f_write(&File, writeBuffer, 60, &numBytes);
-    if(res != FR_OK)
-    	UART0::GetInstance()->WriteLine("Failed to write file on drive 0");
-
-	*/
-
-    //UART0::GetInstance()->WriteLine("Read the following from test.txt:");
-    //UART0::GetInstance()->WriteLine(static_cast<const char *>(buffer));
-
-    /* Close open files */
-    //f_close(&File);
-
-    /* Unregister work area prior to discard it */
-    //f_mount(0, NULL);
     //Log::GetInstance()->SystemBooted();
 
 
 	// instantiate the SDLogger class
 	SDLogger tempLogger;
 	tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
+
+	RTCTime * time;
 
     for (;;)
     {
@@ -324,22 +304,32 @@ void APRSBeacon::Run()
 
         //IOPorts::RadioPTT(false);
 
+        time = RTC::GetInstance()->Get();
+
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
 
         //get the temp every second
         if((Timer1::GetInstance()->GetTick() % 1000) == 0) {
         	//IOPorts::RadioPTT(true);
+        	IOPorts::StatusLED(IOPorts::LEDGreen, true);
         	tempF = LM92::GetInstance()->ReadTempF();
         	// write the temperature out to the SD card
-        	numChars = sprintf(tempBuffer, "%0.2f degrees F\n", (float)tempF / 10);
-        	tempLogger.Append(tempBuffer, numChars);
+        	numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d\n", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds);
+        	//tempLogger.Append(tempBuffer, numChars);
 
         	// write to the serial port as well
-        	UART0::GetInstance()->WriteLine(static_cast<const char *>(tempBuffer));
+        	//UART0::GetInstance()->WriteLine("%s", tempBuffer);
+        	IOPorts::StatusLED(IOPorts::LEDGreen, false);
+
+        	IOPorts::StatusLED(IOPorts::LEDRed, true);
+			//tempLogger.fSync();
+			IOPorts::StatusLED(IOPorts::LEDRed, false);
         }
 
-    } // END for
+    } // END for(;;)
 }
+
+
 
 

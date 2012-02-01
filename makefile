@@ -20,7 +20,7 @@
 #                                                                          #
 ############################################################################
 #                                                                          #
-#  Filename:     SDLogger.h                                                #
+#  Filename:     makefile                                                  #
 #                                                                          #
 ############################################################################
 
@@ -80,7 +80,7 @@ CSRC  = CRunTime.c
 CSRC += fatfs/ff.c fatfs/mmc.c
 
 # List CPP source files here
-CPPSRC = AFSK.cpp main.cpp Engineering.cpp APRSBeacon.cpp IOPorts.cpp Log.cpp SDLogger.cpp
+CPPSRC = AFSK.cpp main.cpp Engineering.cpp APRSBeacon.cpp IOPorts.cpp Log.cpp SDLogger.cpp GPSNmea.cpp
 
 # List ASM source files here
 ASRC = crt.s

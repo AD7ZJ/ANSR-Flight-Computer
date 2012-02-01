@@ -34,21 +34,35 @@ SDLogger::SDLogger() {
 
 }
 
-void SDLogger::Enable(const char * fileName, uint8_t mode) {
+bool_t SDLogger::Enable(const char * fileName, uint8_t mode) {
 	if(f_mount(0, &Fatfs) != FR_OK)
 	    	UART0::GetInstance()->WriteLine("Failed to mount SD card");
 
 	DSTATUS stat = disk_initialize(0);
 	res = f_open(&File, fileName, mode);
-	if(res != FR_OK)
+	if(res != FR_OK) {
 		UART0::GetInstance()->WriteLine("Failed to open file on drive 0");
+		return false;
+	}
+	else
+		return true;
 
 }
 
-void SDLogger::Append(char * buffer, UINT byteCount) {
-	FRESULT result = f_lseek(&File, f_size(&File));
-	result = f_write(&File, buffer, byteCount, &bytesWritten);
-	result = f_sync(&File);
-	int i = 0;
+bool_t SDLogger::Append(char * buffer, UINT byteCount) {
+	res = f_lseek(&File, f_size(&File));
+	res = f_write(&File, buffer, byteCount, &bytesWritten);
+
+	if(res != FR_OK)
+		return false;
+	else
+		return true;
+}
+
+bool_t SDLogger::fSync() {
+	res = f_sync(&File);
+	if(res == FR_OK)
+		return true;
+	return false;
 }
 
