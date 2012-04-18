@@ -1,21 +1,29 @@
 /***************************************************************************
  *                                                                         *
- *                              ESS, Inc.                                  *
+ *  This program is free software; you can redistribute it and/or modify   *
+ *  it under the terms of the GNU General Public License as published by   *
+ *  the Free Software Foundation; either version 2 of the License, or      *
+ *  (at your option) any later version.                                    *
  *                                                                         *
- *    ESS, Inc. CONFIDENTIAL AND PROPRIETARY.  This source is the sole     *
- *    property of ESS, Inc.  Reproduction or utilization of this source    *
- *    in whole or in part is forbidden without the written consent of      *
- *    ESS, Inc.                                                            *
+ *  This program is distributed in the hope that it will be useful,        *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of         *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          *
+ *  GNU General Public License for more details.                           *
+ *                                                                         *
+ *  You should have received a copy of the GNU General Public License      *
+ *  along with this program; if not, write to the Free Software            *
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111 USA    *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *            (c) Copyright 1997-2008 -- All Rights Reserved               *
+ *               (c) Copyright, 2011-2012, Elijah Brown                    *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- * Filename:     GPSNmea.cpp                                             *
+ * Filename:     GPSNmea.cpp                                               *
  *                                                                         *
  ***************************************************************************/
+
 
 #include "main.h"
 
@@ -25,21 +33,19 @@ static GPSNmea nmeaSingletonObject;
 /**
  * Constructor.
  */
-GPSNmea::GPSNmea()
-{
+GPSNmea::GPSNmea() {
     this->dataReadyFlag = false;
     this->utcOffset = 0;
     this->timeOfWeek = 0;
-    this->gpsParseState = WAITING;
+    this->gpsParseState = STARTOFMESSAGE;
     this->data.navType = 0xff;
 }
 
-/**
+/**bool
  * Get a pointer to the Lassen GPS Engine object.
  */
-GPSNmea *GPSNmea::GetInstance()
-{
-	return 	&nmeaSingletonObject;
+GPSNmea *GPSNmea::GetInstance() {
+    return &nmeaSingletonObject;
 }
 
 /**
@@ -47,11 +53,9 @@ GPSNmea *GPSNmea::GetInstance()
  *
  *   @return pointer to GPSData object
  */
-GPSData *GPSNmea::Data()
-{
+GPSData *GPSNmea::Data() {
     return &this->data;
 }
-
 
 /**
  *   Determine if new GPS message is ready to process.  This function is a one shot and
@@ -59,10 +63,8 @@ GPSData *GPSNmea::Data()
  *
  *   @return true if new message available; otherwise false
  */
-bool_t GPSNmea::IsDataReady()
-{
-    if (this->dataReadyFlag)
-    {
+bool_t GPSNmea::IsDataReady() {
+    if (this->dataReadyFlag) {
         this->dataReadyFlag = false;
         return true;
     } //END if
@@ -76,233 +78,363 @@ bool_t GPSNmea::IsDataReady()
 void GPSNmea::Update() {
     uint32_t value;
 
-    // This state machine handles each characters as it is read from the GPS serial port.
+    // This state machine handles each character as it is read from the GPS serial port.
     while (HasData()) {
         // Get the character value.
         value = ReadData();
         //this->gpsBuffer[this->gpsIndex++] = value;
+        switch (gpsParseState) {
+        ///////////////////////////////////////////////////////////////////////
+        // Search for start of message '$'
+        case STARTOFMESSAGE:
+            if (value == '$') {
+                calcChecksum = 0; // reset checksum
+                index = 0; // reset index
+                gpsParseState = COMMAND;
+            }
+            break;
 
-        // Parse the NMEA packet
-        switch(this->gpsParseState) {
-			//case '\n':
-			//	if(this->gpsBuffer[this->gpsIndex - 2] == '\r') {
-			//		this->gpsBuffer[this->gpsIndex = 0];
-			//		UART0::GetInstance()->WriteLine("Begin: %s", gpsBuffer);
-			//		this->gpsIndex = 0;
-			//	}
-			//	break;
+            ///////////////////////////////////////////////////////////////////////
+            // Retrieve command (NMEA Address)
+        case COMMAND:
+            if (value != ',' && value != '*') {
+                commandBuffer[index++] = value;
+                calcChecksum ^= value;
 
+                // Check for command overflow
+                if (index >= MAX_CMD_LEN)
+                    gpsParseState = STARTOFMESSAGE;
+            } else {
+                commandBuffer[index] = '\0'; // terminate command
+                calcChecksum ^= value;
+                index = 0;
+                gpsParseState = DATA; // goto get data state
+            }
+            break;
 
-			case WAITING:
-				switch (value) {
-					case '$':
-						this->gpsBuffer[this->gpsIndex++] = value;
-						gpsParseState = SENTENCE_HEADER;
-						break;
-					default:
-						this->gpsIndex = 0;
-						break;
-				}
-				break;
+            // Store data and check for end of sentence or checksum flag
+        case DATA:
+            if (value == '*') { // checksum flag?
+                dataBuffer[index] = '\0';
+                gpsParseState = CHECKSUM_1;
+            } else {
+                // Check for end of sentence with no checksum
+                if (value == '\r') {
+                    dataBuffer[index] = '\0';
+                    ProcessCommand(commandBuffer, dataBuffer);
+                    gpsParseState = STARTOFMESSAGE;
+                    return;
+                }
 
-			case SENTENCE_HEADER:
-				this->gpsBuffer[this->gpsIndex++] = value;
-				switch (value) {
-					case 'A':
-						if(this->gpsIndex == 6) {
-							// Assume it's a GGA packet
-							this->gpsPacketType = GGA;
-							this->gpsParseState = CARRIAGE_RET;
-						}
-						break;
-					case 'C':
-						if(this->gpsIndex == 6) {
-							// Assume it's an RMC packet
-							this->gpsPacketType = RMC;
-							this->gpsParseState = CARRIAGE_RET;
-						}
-						break;
-					case '\n':
-					case '\r':
-						// we've missed something, trash the packet and wait for the next one
-						this->gpsParseState = WAITING;
-						this->gpsIndex = 0;
-						break;
-				}
+                //
+                // Store data and calculate checksum
+                //
+                calcChecksum ^= value;
+                dataBuffer[index] = value;
+                if (++index >= MAX_DATA_LEN) // Check for buffer overflow
+                    gpsParseState = STARTOFMESSAGE;
+            }
+            break;
 
-				break;
+        case CHECKSUM_1:
+            if ((value - '0') <= 9)
+                receivedChecksum = (value - '0') << 4;
+            else
+                receivedChecksum = (value - 'A' + 10) << 4;
 
-			case CARRIAGE_RET:
-				this->gpsBuffer[this->gpsIndex++] = value;
-				if(value == '\r') {
-					this->gpsParseState = NEWLINE;
-				}
+            gpsParseState = CHECKSUM_2;
+            break;
 
-				if(value == '\n') {
-					// we've missed something, trash the packet and wait for the next one
-					this->gpsParseState = WAITING;
-					this->gpsIndex = 0;
-				}
-				break;
+        case CHECKSUM_2:
+            if ((value - '0') <= 9)
+                receivedChecksum |= (value - '0');
+            else
+                receivedChecksum |= (value - 'A' + 10);
 
-			case NEWLINE:
-				if(value != '\n') {
-					// we've missed something, trash the packet and wait for the next one
-					this->gpsParseState = WAITING;
-					this->gpsIndex = 0;
-				}
-				else {
-					this->gpsBuffer[this->gpsIndex++] = value;
-					UART0::GetInstance()->WriteLine("%s", gpsBuffer);
-					if(this->gpsPacketType == GGA)
-						ParseGGA();
-					else
-						ParseRMC();
-					this->gpsParseState = WAITING;
-					this->gpsIndex = 0;
-				}
+            if (calcChecksum == receivedChecksum)
+                ProcessCommand(commandBuffer, dataBuffer);
 
-				break;
-        } // END switch
+            gpsParseState = STARTOFMESSAGE;
+            break;
+
+            ///////////////////////////////////////////////////////////////////////
+        default:
+            gpsParseState = STARTOFMESSAGE;
+        }
     } // END while
 }
 
-void GPSNmea::ParseRMC() {
-	char * temp;
-	char substr[2];
-	temp = strtok(gpsBuffer, ",");
-	if(strcmp(temp, "$GPRMC"))
-		return;
+/**
+ * Process NMEA sentence - switch on the NMEA command and call the
+ * appropriate processor
+ */
+void GPSNmea::ProcessCommand(uint8_t *pCommand, uint8_t *pData) {
+    /*
+     * GPGGA
+     */
+    if (!strcmp((char *) pCommand, "GPGGA"))
+        ProcessGPGGA(pData);
 
-	// Split out the time field
-	temp = strtok(NULL, ",");
-	// grab the hours
-	strncpy(substr, temp, 2);
-	this->data.hours = atoi(substr);
-	// grab the minutes
-	strncpy(substr, (temp + 2), 2);
-	this->data.minutes = atoi(substr);
-	// grab the seconds
-	strncpy(substr, (temp + 4), 2);
-	this->data.seconds = atoi(substr);
+    /*
+     * GPRMC
+     */
+    else if (!strcmp((char *) pCommand, "GPRMC"))
+        ProcessGPRMC(pData);
 
-	// Status field; ignoring for now
-	temp = strtok(NULL, ",");
-
-	// split out the latitude
-	temp = strtok(NULL, ",");
-	// grab the degree field of the lat
-	strncpy(substr, temp, 2);
-	this->data.latitude = (10000000 * (int32_t)atoi(substr));
-	// grab the minutes field of the latitude
-	this->data.latitude += lroundf((10000000 * atof(temp + 2)) / 60);
-	// figure out if it's north or south
-	temp = strtok(NULL, ",");
-	this->data.latitude = (temp[0] == 'N') ? this->data.latitude : -this->data.latitude;
-
-	// split out the longitude
-	temp = strtok(NULL, ",");
-	// grab the degree field of the long
-	strncpy(substr, temp, 3);
-	this->data.longitude = (10000000 * (int32_t)atoi(substr));
-	// grab the minutes field of the longitude
-	this->data.longitude += lroundf((10000000 * atof(temp + 3)) / 60);
-	// Zero out the 3rd byte of substr
-	substr[2] = 0;
-
-	// figure out if it's east or west
-	temp = strtok(NULL, ",");
-	this->data.longitude = (temp[0] == 'E') ? this->data.longitude : -this->data.longitude;
-
-	// Groundspeed in knots, converted to cm/s
-	temp = strtok(NULL, ",");
-	this->data.speed = lroundf(atof(temp) * 51.4444444);
-
-	// heading in degrees, converted to hundreths of a degree
-	temp = strtok(NULL, ",");
-	this->data.heading = lroundf(atof(temp) * 100);
-
-	// date in ddmmyy
-	temp = strtok(NULL, ",");
-	// grab the day
-	strncpy(substr, temp, 2);
-	printf("Date field: %s Day field: %s\n",temp, substr);
-	this->data.day = atoi(substr);
-	// grab the month
-	strncpy(substr, (temp + 2), 2);
-	this->data.month = atoi(substr);
-	// grab the year
-	strncpy(substr, (temp + 4), 2);
-	this->data.year = (atoi(substr) + 2000);
-
-	//printf("Parsed time: %d:%d:%d ; Lat: %d Long: %d\n", this->data.hours, this->data.minutes, this->data.seconds, this->data.latitude, this->data.longitude);
-	//printf("Groundspeed: %d Heading: %d Date (dd/mm/yyyy): %d/%d/%d\n", this->data.speed, this->data.heading, this->data.day, this->data.month, this->data.year);
+    //m_dwCommandCount++;
+    //return TRUE;
 }
 
-void GPSNmea::ParseGGA() {
-	char * temp;
-	char substr[2];
-	temp = strtok(gpsBuffer, ",");
-	if(strcmp(temp, "$GPGGA"))
-		return;
+/**
+ * This function will get the specified field in a NMEA string.
+ *
+ * @param pData Pointer to NMEA string
+ * @param pField Pointer to returned field
+ * @param nfieldNum Field offset to get
+ * @param nMaxFieldLen Maximum number of bytes pField can handle
+ */
+bool GPSNmea::GetField(uint8_t *pData, uint8_t *pField, int8_t nFieldNum, int8_t nMaxFieldLen) {
+    /*
+     * Validate params
+     */
+    if (pData == NULL || pField == NULL || nMaxFieldLen <= 0) {
+        return false;
+    }
 
-	// Split out the time field
-	temp = strtok(NULL, ",");
-	// grab the hours
-	strncpy(substr, temp, 2);
-	this->data.hours = atoi(substr);
-	// grab the minutes
-	temp = temp + 2;
-	strncpy(substr, temp, 2);
-	this->data.minutes = atoi(substr);
-	// grab the seconds
-	temp = temp + 2;
-	strncpy(substr, temp, 2);
-	this->data.seconds = atoi(substr);
+    /*
+     * Go to the beginning of the selected field
+     */
+    int i = 0;
+    int nField = 0;
+    while (nField != nFieldNum && pData[i]) {
+        if (pData[i] == ',') {
+            nField++;
+        }
 
-	// split out the latitude
-	temp = strtok(NULL, ",");
-	// grab the degree field of the lat
-	strncpy(substr, temp, 2);
-	this->data.latitude = (10000000 * (int32_t)atoi(substr));
-	// grab the minutes field of the latitude
-	temp = temp + 2;
-	this->data.latitude += lroundf((10000000 * atof(temp)) / 60);
+        i++;
 
-	// figure out if it's north or south
-	temp = strtok(NULL, ",");
-	this->data.latitude = (temp[0] == 'N') ? this->data.latitude : -this->data.latitude;
+        if (pData[i] == NULL) {
+            pField[0] = '\0';
+            return false;
+        }
+    }
 
-	// split out the longitude
-	temp = strtok(NULL, ",");
-	// grab the degree field of the long
-	strncpy(substr, temp, 3);
-	this->data.longitude = (10000000 * (int32_t)atoi(substr));
-	// grab the minutes field of the longitude
-	temp = temp + 3;
-	this->data.longitude += lroundf((10000000 * atof(temp)) / 60);
+    if (pData[i] == ',' || pData[i] == '*') {
+        pField[0] = '\0';
+        return false;
+    }
 
-	// figure out if it's east or west
-	temp = strtok(NULL, ",");
-	this->data.longitude = (temp[0] == 'E') ? this->data.longitude : -this->data.longitude;
+    /*
+     * copy field from pData to Field
+     */
+    int i2 = 0;
+    while (pData[i] != ',' && pData[i] != '*' && pData[i]) {
+        pField[i2] = pData[i];
+        i2++;
+        i++;
 
-	// Grab the fix data
-	temp = strtok(NULL, ",");
-	if(atoi(temp) == 0)
-		this->data.fixType = GPSData::NoFix;
+        /*
+         * check if field is too big to fit on passed parameter. If it is,
+         * crop returned field to its max length.
+         */
+        if (i2 >= nMaxFieldLen) {
+            i2 = nMaxFieldLen - 1;
+            break;
+        }
+    }
+    pField[i2] = '\0';
 
-	// Number of birds being tracked
-	temp = strtok(NULL, ",");
-	this->data.trackedSats = atoi(temp);
+    return true;
+}
 
-	// Horizontal dilution of precision (HDOP)
-	temp = strtok(NULL, ",");
-	this->data.dop = lroundf(10 * atof(temp));
+void GPSNmea::ProcessGPGGA(uint8_t *pData) {
+    uint8_t pField[MAXFIELD];
+    char pBuff[10];
 
-	// Altitude above MSL
-	temp = strtok(NULL, ",");
-	this->data.altitude = lroundf(100 * atof(temp));
+    // Time
+    if (GetField(pData, pField, 0, MAXFIELD)) {
+        // Hour
+        pBuff[0] = pField[0];
+        pBuff[1] = pField[1];
+        pBuff[2] = '\0';
+        data.hours = atoi(pBuff);
 
-	//printf("Parsed time: %d:%d:%d ; Lat: %d Long: %d\nTracked sats: %d\n", this->data.hours, this->data.minutes, this->data.seconds, this->data.latitude, this->data.longitude, this->data.trackedSats);
-	//printf("Dilution of precision: %d Alt: %d m\n", this->data.dop, this->data.altitude / 100);
+        // minute
+        pBuff[0] = pField[2];
+        pBuff[1] = pField[3];
+        pBuff[2] = '\0';
+        data.minutes = atoi(pBuff);
+
+        // Second
+        pBuff[0] = pField[4];
+        pBuff[1] = pField[5];
+        pBuff[2] = '\0';
+        data.seconds = atoi(pBuff);
+    }
+
+    // Latitude
+    if (GetField(pData, pField, 1, MAXFIELD)) {
+        data.latitude = lroundf(10000000 * atof((char *) pField + 2) / 60.0);
+        pField[2] = '\0';
+        data.latitude += lroundf(10000000 * atof((char *) pField));
+
+    }
+    if (GetField(pData, pField, 2, MAXFIELD)) {
+        if (pField[0] == 'S')
+            data.latitude = -data.latitude;
+    }
+
+    // Longitude
+    if (GetField(pData, pField, 3, MAXFIELD)) {
+        data.longitude = lroundf(10000000 * atof((char *) pField + 3) / 60.0);
+        pField[3] = '\0';
+        data.longitude += lroundf(10000000 * atof((char *) pField));
+    }
+    if (GetField(pData, pField, 4, MAXFIELD)) {
+        if (pField[0] == 'W')
+            data.longitude = -data.longitude;
+    }
+
+    // GPS fix type
+    if (GetField(pData, pField, 5, MAXFIELD)) {
+        data.fixType = (pField[0] == '0') ? data.NoFix : data.Fix3D ;
+    }
+
+    // Satellites in use
+    if (GetField(pData, pField, 6, MAXFIELD)) {
+        pBuff[0] = pField[0];
+        pBuff[1] = pField[1];
+        pBuff[2] = '\0';
+        data.trackedSats = atoi(pBuff);
+    }
+
+    // HDOP
+    if (GetField(pData, pField, 7, MAXFIELD)) {
+        data.dop = lroundf(atof((CHAR *) pField) * 10); // FIXME: is this the right units?
+    }
+
+    // Altitude
+    if (GetField(pData, pField, 8, MAXFIELD)) {
+        data.altitude = lroundf(atof((CHAR *) pField) * 100);
+    }
+}
+
+void GPSNmea::ProcessGPRMC(uint8_t *pData)
+{
+    CHAR pBuff[10];
+    BYTE pField[MAXFIELD];
+
+    //
+    // Time
+    //
+    if(GetField(pData, pField, 0, MAXFIELD))
+    {
+        // Hour
+        pBuff[0] = pField[0];
+        pBuff[1] = pField[1];
+        pBuff[2] = '\0';
+        data.hours = atoi(pBuff);
+
+        // minute
+        pBuff[0] = pField[2];
+        pBuff[1] = pField[3];
+        pBuff[2] = '\0';
+        data.minutes = atoi(pBuff);
+
+        // Second
+        pBuff[0] = pField[4];
+        pBuff[1] = pField[5];
+        pBuff[2] = '\0';
+        data.seconds = atoi(pBuff);
+    }
+
+    //
+    // Data valid
+    //
+    if(GetField(pData, pField, 1, MAXFIELD))
+        data.fixType = (pField[0] == 'A') ? data.Fix3D : data.NoFix;
+
+    //
+    // latitude
+    //
+    if(GetField(pData, pField, 2, MAXFIELD))
+    {
+        data.latitude = lroundf(10000000 * atof((char *) pField + 2) / 60.0);
+        pField[2] = '\0';
+        data.latitude += lroundf(10000000 * atof((char *) pField));
+
+    }
+    if(GetField(pData, pField, 3, MAXFIELD))
+    {
+        if(pField[0] == 'S')
+        {
+            data.latitude = -data.latitude;
+        }
+    }
+
+    //
+    // Longitude
+    //
+    if(GetField(pData, pField, 4, MAXFIELD))
+    {
+        data.longitude = lroundf(10000000 * atof((CHAR *)pField+3) / 60.0);
+        pField[3] = '\0';
+        data.longitude += lroundf(10000000 * atof((CHAR *)pField));
+    }
+    if(GetField(pData, pField, 5, MAXFIELD))
+    {
+        if(pField[0] == 'W')
+        {
+            data.longitude = -data.longitude;
+        }
+    }
+
+    //
+    // Ground speed
+    //
+    if(GetField(pData, pField, 6, MAXFIELD))
+    {   // convert to cm/s
+        data.speed = lroundf(51.4444 * atof((CHAR *)pField));
+    }
+    else
+    {
+        data.speed = 0.0;
+    }
+
+    //
+    // course over ground, degrees true converted 0.01 degree
+    //
+    if(GetField(pData, pField, 7, MAXFIELD))
+    {
+        data.heading = lroundf(100 * atof((CHAR *)pField));
+    }
+    else
+    {
+        data.heading = 0.0;
+    }
+
+    //
+    // Date
+    //
+    if(GetField(pData, pField, 8, MAXFIELD))
+    {
+        // Day
+        pBuff[0] = pField[0];
+        pBuff[1] = pField[1];
+        pBuff[2] = '\0';
+        data.day = atoi(pBuff);
+
+        // Month
+        pBuff[0] = pField[2];
+        pBuff[1] = pField[3];
+        pBuff[2] = '\0';
+        data.month = atoi(pBuff);
+
+        // Year (Only two digits. I wonder why?)
+        pBuff[0] = pField[4];
+        pBuff[1] = pField[5];
+        pBuff[2] = '\0';
+        data.year = atoi(pBuff);
+        data.year += 2000;             // make 4 digit date -- What assumptions should be made here?
+    }
 }
