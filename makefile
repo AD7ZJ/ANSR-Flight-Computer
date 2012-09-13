@@ -64,7 +64,7 @@ DLIBS = -lm
 #
 
 # Define project name here
-PROJECT = APRSBeacon
+PROJECT = FlightComputer
 
 # Define linker script file here
 LDSCRIPT = lpc2148-flash.ld
@@ -146,7 +146,7 @@ all: $(OBJS) $(PROJECT).elf $(PROJECT).bin $(PROJECT).hex
 	$(SIZE) $<
 	
 docs:
-	doxygen APRSBeacon.dox	
+	doxygen FlightComputer.dox	
 
 clean:
 	-rm -f $(OBJS)

@@ -13,25 +13,25 @@
 typedef unsigned long uint32_t;
 
 #define SPI_SS_PIN		20
-#define	SPI_SS_IODIR	FIO0DIR
-#define	SPI_SS_IOCLR	FIO0CLR
-#define	SPI_SS_IOSET	FIO0SET
-#define	SPI_SS_IOPIN	FIO0PIN
+#define SPI_SS_IODIR	FIO0DIR
+#define SPI_SS_IOCLR	FIO0CLR
+#define	 SPI_SS_IOSET	FIO0SET
+#define	 SPI_SS_IOPIN	FIO0PIN
 
 
 #define SSP_CH	1	/* SSP channel to use (0:SSP0, 1:SSP1) */
 
 // TBD: Is this right?
-#define	INS			((SPI_SS_IOPIN&(1<<SPI_SS_PIN))>>SPI_SS_PIN)	/* Socket status (true:Inserted, false:Empty) */
-#define	WP			0 /* Card write protection (true:yes, false:no) */
+#define	 INS			((SPI_SS_IOPIN&(1<<SPI_SS_PIN))>>SPI_SS_PIN)	/* Socket status (true:Inserted, false:Empty) */
+#define WP			0 /* Card write protection (true:yes, false:no) */
 
-#define	SSPxDR		SSPDR
-#define	SSPxSR		SSPSR
-#define	SSPxCR0		SSPCR0
-#define	SSPxCR1		SSPCR1
-#define	SSPxCPSR	SSPCPSR
-#define	CS_LOW()	{SPI_SS_IOCLR |= (1 << SPI_SS_PIN);}
-#define	CS_HIGH()	{SPI_SS_IOSET |= (1 << SPI_SS_PIN);}
+#define SSPxDR		SSPDR
+#define	 SSPxSR		SSPSR
+#define SSPxCR0		SSPCR0
+#define	 SSPxCR1	SSPCR1
+#define	 SSPxCPSR	SSPCPSR
+#define	 CS_LOW()	{SPI_SS_IOCLR |= (1 << SPI_SS_PIN);}
+#define	 CS_HIGH()	{SPI_SS_IOSET |= (1 << SPI_SS_PIN);}
 
 #define FCLK_FAST() { SSPCR0 = 0x0507; }
 #define FCLK_SLOW() { SSPCR0 = 0x0E07; }
@@ -383,7 +383,7 @@ DSTATUS disk_initialize (
 )
 {
 	BYTE n, cmd, ty, ocr[4];
-
+    int i = 0;
 
 	if (drv) return STA_NOINIT;			/* Supports only drive 0 */
 	if (Stat & STA_NODISK) return Stat;	/* Is card existing in the soket? */
@@ -391,6 +391,8 @@ DSTATUS disk_initialize (
 	power_on();							/* Initialize SPI */
 	FCLK_SLOW();
 	for (n = 10; n; n--) xchg_spi(0xFF);	/* Send 80 dummy clocks */
+
+	for(i = 0; i < 100000; i++);        /* Wait a few milliseconds */
 
 	ty = 0;
 	if (send_cmd(CMD0, 0) == 1) {			/* Put the card SPI/Idle state */

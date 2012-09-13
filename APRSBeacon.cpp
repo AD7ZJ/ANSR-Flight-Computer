@@ -135,7 +135,7 @@ void APRSBeacon::StatusPacket(const GPSData *gps, char *text)
     sprintf (buffer, "%lddegF ", LM92::GetInstance()->ReadTempF() / 10);
     strcat (text, buffer);
 
-    strcat (text, "www.kd7lmo.net\015");
+    strcat (text, "www.ansr.org\015");
 }
 
 /**
@@ -156,7 +156,7 @@ void APRSBeacon::ScheduleMessage()
         // Get a pointer to the GPS data set.
         GPSData *gpsData = this->gps->Data();
 
-        // Log the fix information.
+        //FIXME: Log the fix information.
         Log::GetInstance()->GPSFix (gpsData);
 
         // Process certain elements when we have a 3D fix.
@@ -237,7 +237,7 @@ void APRSBeacon::Run()
 
     // SPI 0 is the CMX867A MODEM, SPI 1 is the M25P80 flash memory.
     SPI0::GetInstance()->Enable();
-    //SPI1::GetInstance()->Enable(SPI1::MaxClock, SPI1::DataSize_8Bits, SPI1::CPOL0_CPHA0);
+    //-SPI1::GetInstance()->Enable(SPI1::MaxClock, SPI1::DataSize_8Bits, SPI1::CPOL0_CPHA0);
 
     // I2C Bus 0 is the temp sensor, real time clock, and 3D MEMS sensor.
     I2C0::GetInstance()->Enable();
@@ -271,7 +271,7 @@ void APRSBeacon::Run()
     SystemControl::Sleep(1000);
 
     // Show a startup message on the serial port.
-    UART0::GetInstance()->WriteLine (">ANSR Flight Computer v0.1 booted!");
+    UART0::GetInstance()->WriteLine (">ANSR Flight Computer v0.2 booted!");
 
     // Turn off the LEDs.
     IOPorts::StatusLED (IOPorts::LEDYellow, false);
@@ -279,28 +279,31 @@ void APRSBeacon::Run()
     // Transmit a startup message.
     this->afsk->Transmit (">ANSR Flight Computer v0.1");
 
-    // test malloc()
-    //int * test;
-    //test = (int*)malloc(4);
-    //*test = 0xdefac8ed;
-
     //Log::GetInstance()->SystemBooted();
 
+    SDLogger gpsLogger;
+    gpsLogger.Enable("gps.bin", FA_OPEN_ALWAYS | FA_WRITE);
 
-	// instantiate the SDLogger class
-	SDLogger tempLogger;
-	tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
+    char gpsTestBuffer[] = "GPS log works...";
+
+    gpsLogger.Append(gpsTestBuffer, 16);
+    gpsLogger.SyncDisk();
+
+    // instantiate the SDLogger class
+    SDLogger tempLogger;
+    tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
 
 	RTCTime * time;
 
     for (;;)
     {
-
         // Check the serial port for engineering commands.
         eng->ProcessCommand();
 
         // Update the waveform state machine as required.
         this->afsk->Update();
+
+        //tempLogger.LineTestHigh();
 
         //IOPorts::RadioPTT(false);
 
@@ -309,22 +312,29 @@ void APRSBeacon::Run()
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
 
+        //tempLogger.LineTestLow();
+
         //get the temp every second
         if((Timer1::GetInstance()->GetTick() % 1000) == 0) {
-        	//IOPorts::RadioPTT(true);
-        	IOPorts::StatusLED(IOPorts::LEDGreen, true);
-        	tempF = LM92::GetInstance()->ReadTempF();
-        	// write the temperature out to the SD card
-        	numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d\n", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds);
-        	//tempLogger.Append(tempBuffer, numChars);
+            //IOPorts::RadioPTT(true);
+            IOPorts::StatusLED(IOPorts::LEDGreen, true);
+            tempF = LM92::GetInstance()->ReadTempF();
+            // write the temperature out to the SD card
+            numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d\n", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds);
 
-        	// write to the serial port as well
-        	//UART0::GetInstance()->WriteLine("%s", tempBuffer);
-        	IOPorts::StatusLED(IOPorts::LEDGreen, false);
+            if(!tempLogger.Append(tempBuffer, numChars))
+                UART0::GetInstance()->WriteLine (">Failed to write data to SD card");
 
-        	IOPorts::StatusLED(IOPorts::LEDRed, true);
-			//tempLogger.fSync();
-			IOPorts::StatusLED(IOPorts::LEDRed, false);
+            UART0::GetInstance()->WriteLine(tempBuffer);
+            // write to the serial port as well
+            //UART0::GetInstance()->WriteLine("%s", tempBuffer);
+            IOPorts::StatusLED(IOPorts::LEDGreen, false);
+
+            IOPorts::StatusLED(IOPorts::LEDRed, true);
+            tempLogger.SyncDisk();
+            IOPorts::StatusLED(IOPorts::LEDRed, false);
+            gpsLogger.Append(gpsTestBuffer, 16);
+            gpsLogger.SyncDisk();
         }
 
     } // END for(;;)

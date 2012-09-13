@@ -317,6 +317,9 @@ void GPSNmea::ProcessGPGGA(uint8_t *pData) {
     if (GetField(pData, pField, 8, MAXFIELD)) {
         data.altitude = lroundf(atof((CHAR *) pField) * 100);
     }
+
+    // Set the data-ready flag
+    this->dataReadyFlag = true;
 }
 
 void GPSNmea::ProcessGPRMC(uint8_t *pData)
@@ -437,4 +440,7 @@ void GPSNmea::ProcessGPRMC(uint8_t *pData)
         data.year = atoi(pBuff);
         data.year += 2000;             // make 4 digit date -- What assumptions should be made here?
     }
+
+    // Set the data-ready flag
+    this->dataReadyFlag = true;
 }

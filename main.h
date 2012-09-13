@@ -28,15 +28,15 @@
 #define MAIN_H
 
 /** 
- * @mainpage APRS Beacon Application
+ * @mainpage Flight Computer Application
  *
  * @section overview_sec Overview
  *
- * APRS Beacon Balloon Tracking application.
+ * Flight Computer Balloon Tracking application.
  *
  * @section copyright Copyright
  *
- *   <b>(c) Copyright, 2001-2008, Michael Gray</b><br>
+ *   <b>(c) Copyright, 2001-2012, ANSR</b><br>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

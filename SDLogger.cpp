@@ -34,35 +34,75 @@ SDLogger::SDLogger() {
 
 }
 
+// Allocate the static member variables
+uint8_t SDLogger::logicalDrive = 0;
+
+/**
+ * Sets up the SD card
+ *
+ * @param fileName Name of the file to open
+ * @param mode Which mode to open the file in.  See http://elm-chan.org/fsw/ff/en/open.html for the different mode options
+ *
+ * @return true if successful, false otherwise
+ */
 bool_t SDLogger::Enable(const char * fileName, uint8_t mode) {
-	if(f_mount(0, &Fatfs) != FR_OK)
-	    	UART0::GetInstance()->WriteLine("Failed to mount SD card");
+    if(f_mount(logicalDrive++, &Fatfs) != FR_OK)
+        UART0::GetInstance()->WriteLine("Failed to mount SD card");
 
-	DSTATUS stat = disk_initialize(0);
-	res = f_open(&File, fileName, mode);
-	if(res != FR_OK) {
-		UART0::GetInstance()->WriteLine("Failed to open file on drive 0");
-		return false;
-	}
-	else
-		return true;
+    res = f_open(&File, fileName, mode);
 
+    if(res != FR_OK) {
+        UART0::GetInstance()->WriteLine("Failed to open file on drive 0");
+        return false;
+    }
+    else
+        return true;
 }
 
-bool_t SDLogger::Append(char * buffer, UINT byteCount) {
-	res = f_lseek(&File, f_size(&File));
-	res = f_write(&File, buffer, byteCount, &bytesWritten);
+/**
+ * Appends data onto the end of the open file
+ *
+ * @param buffer Pointer to an array of bytes to be written at the end of the file
+ * @param byteCount Number of bytes in the array to write
+ *
+ * @return true if successful, false otherwise
+ */
+bool_t SDLogger::Append(void * buffer, UINT byteCount) {
+    res = f_lseek(&File, f_size(&File));
+    res = f_write(&File, buffer, byteCount, &bytesWritten);
 
-	if(res != FR_OK)
-		return false;
-	else
-		return true;
+    if(res != FR_OK)
+        return false;
+    else
+        return true;
 }
 
-bool_t SDLogger::fSync() {
-	res = f_sync(&File);
-	if(res == FR_OK)
-		return true;
-	return false;
+/**
+ * Forces any data in memory to be written to the disk
+ *
+ * @return true if successful, false otherwise
+ */
+bool_t SDLogger::SyncDisk() {
+    res = f_sync(&File);
+    if(res == FR_OK)
+        return true;
+    return false;
 }
 
+/**
+ * Sets the SD card I/O lines high
+ */
+void SDLogger::LineTestHigh() {
+    // set the pins to GPIO
+    PINSEL1 &= ~(0x0F << 2);
+    // set the pins as outputs
+    FIO0DIR |= (1 << 17) | (1 << 18) | (1 << 19) | (1 << 20);
+    FIO0SET |= (1 << 17) | (1 << 18) | (1 << 19) | (1 << 20);
+}
+
+/**
+ * Sets the SD card I/O lines low
+ */
+void SDLogger::LineTestLow() {
+    FIO0CLR |= (1 << 17) | (1 << 18) | (1 << 19) | (1 << 20);
+}

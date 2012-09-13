@@ -50,13 +50,19 @@ public:
     bool_t Enable(const char * fileName, uint8_t mode);
     bool_t Write();
     bool_t Read();
-    bool_t Append(char * buffer, UINT byteCount);
-    bool_t fSync();
+    bool_t Append(void * buffer, UINT byteCount);
+    bool_t SyncDisk();
+
+    void LineTestHigh();
+    void LineTestLow();
+
+    /// Static var to keep track of the logical drive number
+    static uint8_t logicalDrive;
 
 private:
     void MICEncoderTestCase (GPSData *gps, uint32_t testCase);
 
-    /// File system object
+    /// File system struct
     FATFS Fatfs;
 
     /// File object
@@ -67,7 +73,6 @@ private:
 
     /// Number of bytes successfully written or received
     UINT numBytes;
-
 
     char buffer[512];
     UINT bytesWritten;

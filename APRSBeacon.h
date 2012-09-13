@@ -30,13 +30,13 @@
 //FIXME: remove once this is rolled into the armlib
 #include "GPSNmea.h"
 /**
- *  @defgroup application APRS Beacon Application
+ *  @defgroup application Flight Computer Application
  *
  *  @{
  */
 
 /**
- *   HF-APRS main application class.
+ *   Flight Computer main application class.
  */
 class APRSBeacon
 {

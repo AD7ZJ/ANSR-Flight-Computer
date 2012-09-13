@@ -30,7 +30,7 @@
 static Log logSingletonObject;
 
 /**
- *  Get a pointer to the Radio waveform generation object.
+ *  Get a pointer to the system logging object.
  */
 Log *Log::GetInstance()
 {
