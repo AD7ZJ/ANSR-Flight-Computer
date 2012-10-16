@@ -104,7 +104,8 @@ void AFSK::Update()
     // If we are the end of the message, shut down the radio.
     if (this->messageIndex == ax25.Length())
     {
-        IOPorts::RadioPTT(false);
+        //FIXME
+        //IOPorts::RadioPTT(false);
         IOPorts::StatusLED (IOPorts::LEDRed, false);
 
         this->txFlag = false;

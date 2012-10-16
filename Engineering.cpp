@@ -255,6 +255,13 @@ void Engineering::ProcessCommand()
                 uart->WriteLine (buffer);                
                 break;
 
+            case 'o':
+                uart->WriteLine("Generating Tones...");
+                APRSBeacon::GetInstance()->testTone.SingleTone(300, 1);
+                APRSBeacon::GetInstance()->testTone.SingleTone(600, 2);
+                APRSBeacon::GetInstance()->testTone.SingleTone(1200, 3);
+                break;
+
             case 'd':
             	uart->WriteLine("Built: %s %s", __DATE__, __TIME__);
             	break;

@@ -70,19 +70,6 @@ void CMX867A::SPIWrite(uint8_t data)
     SPI0::GetInstance()->Write(data);
 }
 
-/**
- * Override the timer tick callback function
- */
-void TimerBase::TimerTickCallback()
-{
-	IOPorts::RadioPTT(true);
-	disk_timerproc();
-	//if(++msElapsed >= 1000) {
-		//IOPorts::RadioPTT(true);
-		//msElapsed = 0;
-	//}
-}
-
 /// Reserve memory for singleton object.
 static APRSBeacon APRSBeaconSingletonObject;
 
@@ -146,7 +133,9 @@ void APRSBeacon::ScheduleMessage()
     char buffer[150];
     MICEncoder micEncoder;
 
+    IOPorts::RadioPTT(true);
     this->gps->Update();
+    IOPorts::RadioPTT(false);
 
     if (SystemControl::GetTick() > this->statusLEDOffTick)
         IOPorts::StatusLED(IOPorts::LEDGreen, false);
@@ -200,18 +189,25 @@ void APRSBeacon::ScheduleMessage()
 
         // Engineering data set reported
         sprintf (buffer, "%ld %s %02d:%02d:%02d %d/%d/%d ", SystemControl::GetTick(), (gpsData->fixType == GPSData::NoFix ? "no fix" : (gpsData->fixType == GPSData::Fix2D ? "2D fix" : "3D fix")), gpsData->hours, gpsData->minutes, gpsData->seconds, gpsData->month, gpsData->day, gpsData->year);
-        UART0::GetInstance()->Write (buffer);
+        //UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "%ld %ld %ld %ld %d %d 0x%x ", gpsData->weekNumber, gpsData->timeOfWeek, gpsData->latitude, gpsData->longitude, gpsData->dop, gpsData->trackedSats, gpsData->navType);
-        UART0::GetInstance()->Write (buffer);
+        //UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "%d deg @ %ld knots ", gpsData->heading, gpsData->SpeedKnots());
-        UART0::GetInstance()->Write (buffer);
+        //UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "%ld", gpsData->AltitudeFeet());
-        UART0::GetInstance()->WriteLine (buffer);
+        //UART0::GetInstance()->WriteLine (buffer);
     } // END if
 }
+
+void APRSBeacon::SystemTimerTick()
+{
+    //IOPorts::RadioPTT(true);
+    disk_timerproc();
+}
+
 
 /**
  * Start and run the mission application.
@@ -224,6 +220,9 @@ void APRSBeacon::Run()
 
     // Set the system clock to the minimum speed required for USB operation.
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
+
+    // Setup Timer1 to run our system timer tick function on each tick
+    Timer1::GetInstance()->SetCallback((void (*)())&APRSBeacon::SystemTimerTick);
 
     // Set the GPIO to the default state.
     IOPorts::Enable();
@@ -295,6 +294,7 @@ void APRSBeacon::Run()
 
 	RTCTime * time;
 
+
     for (;;)
     {
         // Check the serial port for engineering commands.
@@ -326,15 +326,12 @@ void APRSBeacon::Run()
                 UART0::GetInstance()->WriteLine (">Failed to write data to SD card");
 
             UART0::GetInstance()->WriteLine(tempBuffer);
-            // write to the serial port as well
-            //UART0::GetInstance()->WriteLine("%s", tempBuffer);
+
             IOPorts::StatusLED(IOPorts::LEDGreen, false);
 
             IOPorts::StatusLED(IOPorts::LEDRed, true);
             tempLogger.SyncDisk();
             IOPorts::StatusLED(IOPorts::LEDRed, false);
-            gpsLogger.Append(gpsTestBuffer, 16);
-            gpsLogger.SyncDisk();
         }
 
     } // END for(;;)

@@ -42,7 +42,7 @@ GPSNmea::GPSNmea() {
 }
 
 /**bool
- * Get a pointer to the Lassen GPS Engine object.
+ * Get a pointer to the NMEA GPS Engine object.
  */
 GPSNmea *GPSNmea::GetInstance() {
     return &nmeaSingletonObject;
@@ -160,6 +160,7 @@ void GPSNmea::Update() {
             ///////////////////////////////////////////////////////////////////////
         default:
             gpsParseState = STARTOFMESSAGE;
+            break;
         }
     } // END while
 }

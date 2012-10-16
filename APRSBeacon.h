@@ -29,6 +29,7 @@
 
 //FIXME: remove once this is rolled into the armlib
 #include "GPSNmea.h"
+#include "ToneGenerator.h"
 /**
  *  @defgroup application Flight Computer Application
  *
@@ -47,8 +48,11 @@ public:
 
     static APRSBeacon *GetInstance();
     
+    ToneGenerator testTone;
+
 private:
     void ScheduleMessage();
+    void SystemTimerTick();
     void StatusPacket(const GPSData *gps, char *text);
     //FAT16 * flash;
     //FAT16::fat16_file_struct * handle;

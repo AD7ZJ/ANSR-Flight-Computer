@@ -58,6 +58,7 @@
 #include "IOPorts.h"
 #include "SDLogger.h"
 #include "GPSNmea.h"
+#include "ToneGenerator.h"
 
 #include <string.h>
 #include <stdint.h>
