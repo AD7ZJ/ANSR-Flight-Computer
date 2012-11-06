@@ -257,9 +257,9 @@ void Engineering::ProcessCommand()
 
             case 'o':
                 uart->WriteLine("Generating Tones...");
-                APRSBeacon::GetInstance()->testTone.SingleTone(300, 1);
-                APRSBeacon::GetInstance()->testTone.SingleTone(600, 2);
-                APRSBeacon::GetInstance()->testTone.SingleTone(1200, 3);
+                FlightComputer::GetInstance()->testTone.SingleTone(300, 1);
+                FlightComputer::GetInstance()->testTone.SingleTone(600, 2);
+                FlightComputer::GetInstance()->testTone.SingleTone(1200, 3);
                 break;
 
             case 'd':

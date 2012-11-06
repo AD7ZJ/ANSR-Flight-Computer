@@ -54,7 +54,7 @@
 #include "AFSK.h"
 #include "Log.h"
 #include "Engineering.h"
-#include "APRSBeacon.h"
+#include "FlightComputer.h"
 #include "IOPorts.h"
 #include "SDLogger.h"
 #include "GPSNmea.h"

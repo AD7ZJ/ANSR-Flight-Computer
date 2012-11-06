@@ -29,5 +29,5 @@
 int main(void)
 {
     // run the singlton instance of the main application class
-    APRSBeacon::GetInstance()->Run();
+    FlightComputer::GetInstance()->Run();
 }

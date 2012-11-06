@@ -20,7 +20,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- * Filename:     APRSBeacon.h                                              *
+ * Filename:     FlightComputer.h                                              *
  *                                                                         *
  ***************************************************************************/
 
@@ -39,14 +39,14 @@
 /**
  *   Flight Computer main application class.
  */
-class APRSBeacon
+class FlightComputer
 {
 public:
-    APRSBeacon();
+    FlightComputer();
     
     void Run();
 
-    static APRSBeacon *GetInstance();
+    static FlightComputer *GetInstance();
     
     ToneGenerator testTone;
 

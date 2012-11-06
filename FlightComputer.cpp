@@ -20,7 +20,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- * Filename:     APRSBeacon.cpp                                            *
+ * Filename:     FlightComputer.cpp                                            *
  *                                                                         *
  ***************************************************************************/
 
@@ -71,20 +71,20 @@ void CMX867A::SPIWrite(uint8_t data)
 }
 
 /// Reserve memory for singleton object.
-static APRSBeacon APRSBeaconSingletonObject;
+static FlightComputer flightComputerSingletonObject;
 
 /**
  *  Get a pointer to the HF-APRS control object.
  */
-APRSBeacon *APRSBeacon::GetInstance()
+FlightComputer *FlightComputer::GetInstance()
 {
-    return  &APRSBeaconSingletonObject;
+    return  &flightComputerSingletonObject;
 }
 
 /**
  * Constructor.
  */
-APRSBeacon::APRSBeacon()
+FlightComputer::FlightComputer()
 {
     this->peakAltitude = 0;
     this->startGPSTime = 0;
@@ -104,7 +104,7 @@ APRSBeacon::APRSBeacon()
  * @param gps pointer to current GPS fix object
  * @param text pointer to NULL terminated string with status packet
  */
-void APRSBeacon::StatusPacket(const GPSData *gps, char *text)
+void FlightComputer::StatusPacket(const GPSData *gps, char *text)
 {
     uint32_t time;
     char buffer[100];
@@ -135,7 +135,7 @@ void APRSBeacon::StatusPacket(const GPSData *gps, char *text)
 /**
  * Generate an APRS packet based on the current GPS time.
  */
-void APRSBeacon::ScheduleMessage()
+void FlightComputer::ScheduleMessage()
 {
     char buffer[150];
     MICEncoder micEncoder;
@@ -209,28 +209,28 @@ void APRSBeacon::ScheduleMessage()
     } // END if
 }
 
-void APRSBeacon::SystemTimerTick()
+void FlightComputer::SystemTimerTick()
 {
     //IOPorts::RadioPTT(true);
     disk_timerproc();
-	APRSBeacon::GetInstance()->msElapsed++;
+	FlightComputer::GetInstance()->msElapsed++;
 	
 	// set 100ms, 1s, and 10s flags used for timing in the main loop
-	if(APRSBeacon::GetInstance()->msElapsed >= 100) {
-	    APRSBeacon::GetInstance()->ms100Elapsed++;
-	    APRSBeacon::GetInstance()->msElapsed = 0;
-	    APRSBeacon::GetInstance()->timer100msFlag = true;
+	if(FlightComputer::GetInstance()->msElapsed >= 100) {
+	    FlightComputer::GetInstance()->ms100Elapsed++;
+	    FlightComputer::GetInstance()->msElapsed = 0;
+	    FlightComputer::GetInstance()->timer100msFlag = true;
 	}
 	
-	if(APRSBeacon::GetInstance()->ms100Elapsed >= 10) {
-	    APRSBeacon::GetInstance()->sElapsed++;
-	    APRSBeacon::GetInstance()->ms100Elapsed = 0;
-	    APRSBeacon::GetInstance()->timer1sFlag = true;
+	if(FlightComputer::GetInstance()->ms100Elapsed >= 10) {
+	    FlightComputer::GetInstance()->sElapsed++;
+	    FlightComputer::GetInstance()->ms100Elapsed = 0;
+	    FlightComputer::GetInstance()->timer1sFlag = true;
 	}
 
-	if(APRSBeacon::GetInstance()->sElapsed >= 10) {
-	    APRSBeacon::GetInstance()->sElapsed = 0;
-	    APRSBeacon::GetInstance()->timer10sFlag = true;
+	if(FlightComputer::GetInstance()->sElapsed >= 10) {
+	    FlightComputer::GetInstance()->sElapsed = 0;
+	    FlightComputer::GetInstance()->timer10sFlag = true;
 	}
 }
 
@@ -238,7 +238,7 @@ void APRSBeacon::SystemTimerTick()
 /**
  * Start and run the mission application.
  */
-void APRSBeacon::Run()
+void FlightComputer::Run()
 {
 	int32_t tempF;
 	char tempBuffer[40];
@@ -248,7 +248,7 @@ void APRSBeacon::Run()
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
 
     // Setup Timer1 to run our system timer tick function on each tick
-    Timer1::GetInstance()->SetCallback((void (*)())&APRSBeacon::SystemTimerTick);
+    Timer1::GetInstance()->SetCallback((void (*)())&FlightComputer::SystemTimerTick);
 
     // Set the GPIO to the default state.
     IOPorts::Enable();
