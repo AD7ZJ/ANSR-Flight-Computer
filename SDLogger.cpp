@@ -78,6 +78,40 @@ bool_t SDLogger::Append(void * buffer, UINT byteCount) {
 }
 
 /**
+ * Writes the objects file with the data contained in buffer
+ * overwrites any existing data in the file
+ *
+ * @param buffer Pointer to an array of bytes to be written at the end of the file
+ * @param byteCount Number of bytes in the array to write
+ *
+ * @return number of bytes successfully written
+ */
+uint16_t SDLogger::WriteToFile(void * buffer, UINT byteCount) {
+    res = f_lseek(&File, 0);
+    res = f_write(&File, buffer, byteCount, &bytesWritten);
+
+    if(res != FR_OK)
+        return bytesWritten;
+    else
+        return 0;
+}
+
+/**
+ * Reads the object's entire file into the supplied buffer
+ *
+ * @param buffer Pointer to an array into which the file's contents will be written
+ *
+ * @return number of bytes read
+ */
+uint16_t SDLogger::ReadFile(void * buffer) {
+    bytesRead = 0;
+    res = f_read(&File, buffer, f_size(&File), &bytesRead);
+
+
+    return bytesRead;
+}
+
+/**
  * Forces any data in memory to be written to the disk
  *
  * @return true if successful, false otherwise

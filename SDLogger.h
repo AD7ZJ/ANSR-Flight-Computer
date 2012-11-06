@@ -52,6 +52,8 @@ public:
     bool_t Read();
     bool_t Append(void * buffer, UINT byteCount);
     bool_t SyncDisk();
+    uint16_t ReadFile(void * buffer);
+    uint16_t WriteToFile(void * buffer, UINT byteCount);
 
     void LineTestHigh();
     void LineTestLow();
@@ -60,8 +62,6 @@ public:
     static uint8_t logicalDrive;
 
 private:
-    void MICEncoderTestCase (GPSData *gps, uint32_t testCase);
-
     /// File system struct
     FATFS Fatfs;
 
@@ -76,6 +76,7 @@ private:
 
     char buffer[512];
     UINT bytesWritten;
+    UINT bytesRead;
 };
 
 /** @} */

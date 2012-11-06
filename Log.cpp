@@ -42,8 +42,8 @@ Log *Log::GetInstance()
  */
 Log::Log()
 {
-    this->m25p80 = M25P80::GetInstance();
-    this->address = 0;
+    this->gps = GPSNmea::GetInstance()->Data();
+    this->burstDetect = false;
 }
 
 /**
@@ -81,55 +81,6 @@ void Log::GPSFix (const GPSData *gps)
     Flush();    
 }
 
-/**
- * Log the system time and date.
- */
-void Log::TimeStamp (const GPSData *gps)
-{
-    Type (TIME_STAMP); 
-    
-    WriteUint8 (gps->month);
-    WriteUint8 (gps->day);
-    WriteUint16 (gps->year);  
-    
-    WriteUint8 (gps->hours);
-    WriteUint8 (gps->minutes);
-    WriteUint8 (gps->seconds);    
-}
-
-/**
- * Write an 8-bit value to flash.
- * 
- * @param data 8-bit data value
- */
-void Log::WriteUint8 (uint8_t data)
-{
-    this->buffer[this->index++] = data;
-}
-
-/**
- * Write an 16-bit value to flash.
- * 
- * @param data 16-bit data value
- */
-void Log::WriteUint16 (uint16_t data)
-{
-    this->buffer[this->index++] = static_cast <uint8_t> ((data >> 8) & 0xff);
-    this->buffer[this->index++] = static_cast <uint8_t> (data & 0xff);    
-}
-
-/**
- * Write an 32-bit value to flash.
- * 
- * @param data 32-bit data value
- */
-void Log::WriteUint32 (uint32_t data)
-{
-    this->buffer[this->index++] = static_cast <uint8_t> ((data >> 24) & 0xff);
-    this->buffer[this->index++] = static_cast <uint8_t> ((data >> 16) & 0xff);
-    this->buffer[this->index++] = static_cast <uint8_t> ((data >> 8) & 0xff);
-    this->buffer[this->index++] = static_cast <uint8_t> (data & 0xff);    
-}
 
 /**
  * Write a binary block of data to flash.
@@ -146,95 +97,51 @@ void Log::WriteBlock (const uint8_t *data, uint32_t length)
 }
 
 /**
- * Send the contents of the log to the serial port.
+ * Send the contents of the wind data log to the serial port
  */
 void Log::Dump()
 {
-    uint32_t i, zeroCount, address;
-    bool_t doneFlag;
-    uint8_t data[24];
-    char buffer[10];
+    UART0::GetInstance()->WriteLine ("Wind Log Contents");
     
-    address = 0;
-    doneFlag = false;
-    zeroCount = 0;
-    
-    UART0::GetInstance()->WriteLine ("Log Contents");
-    
-    while (!doneFlag)
-    {
-        this->m25p80->ReadBlock (address, data, sizeof(data));
-        
-        sprintf (buffer, "%08lx ", address);
-        UART0::GetInstance()->Write (buffer);
-        
-        for (i = 0; i < sizeof(data); ++i)
-        {
-            sprintf (buffer, "%02x ", data[i]);
-            UART0::GetInstance()->Write (buffer);
-            
-            if (data[i] == 0xff)
-                ++zeroCount;
-            else
-                zeroCount = 0;
-        } // END for
-        
-        UART0::GetInstance()->WriteLine ("");
-        
-        if (UART0::GetInstance()->IsCharReady())
-            doneFlag = true;
-        
-        if (zeroCount > 32)
-            doneFlag = true;
-        
-        address += sizeof(data);
-        
-    } // END while    
+    // Find the last entry in the table.
+    for (int i = 0; i < NAV_BLOCKCOUNT && windData[i].coord.alt != 0; i++) {
+        UART0::GetInstance()->WriteLine("alt:%l dist:%f heading:%f", windData[i].coord.alt, windData[i].course.dist, windData[i].course.head);
+    }
 }
 
 /**
- *   Write the contents of the temporary log buffer to the flash device.  If the buffer
- *   is empty, nothing is done.
+ *   Write the contents of the wind data field out to the SD card
  */
 void Log::Flush()
 {
     // We only need to write if there is data.
     if (this->index != 0) 
     {
-        this->m25p80->WriteBlock (this->address, this->buffer, this->index);
-        this->address += this->index;
-        this->index = 0;
+        windLogger.WriteToFile((void *)windData, sizeof(windData));
     } // END if
 }
 
 /**
- *   Start a entry in the data log.
- *
- *   @param type enumeration that describes the type of log entry
- */
-void Log::Type (LOG_RECORD_TYPE type)
-{
-    // Only add the new entry if there is space.
-    if (this->address >= 0x100000)
-        return;
-
-    // Write the old entry first.
-    Flush();
-
-    // Save the type and set the log buffer pointer.
-    this->buffer[0] = type;
-    this->index = 1;
-}
-
-/**
- * Erase the contents of the flash memory log.
+ * Erase the contents of the wind data table
  */
 void Log::Erase()
 {
-    this->m25p80->BulkErase();
-    
-    // Set the write address back to the start.
-    this->address = 0x0000;
+    // zero all the entries in the wind data table
+    for (int i = 0; i < NAV_BLOCKCOUNT; i++) {
+        windData[i].timeStamp = 0;
+        windData[i].timeInterval = 0;
+
+        windData[i].course.dist = 0;
+        windData[i].course.head = 0;
+        windData[i].course.trackError = 0;
+
+        windData[i].coord.lat = 0;
+        windData[i].coord.lon = 0;
+        windData[i].coord.alt = 0;
+    } // END for
+
+    maxAltitude = 0;
+    burstDetect = false;
 }
 
 /**
@@ -242,42 +149,206 @@ void Log::Erase()
  */
 void Log::Enable()
 {
-    uint8_t buffer[8];
-    bool_t endFound;
-
-    // Parse through the log to find the end of memory.
-    this->address = 0x0000;
-    endFound = false;
+    windLogger.Enable("wind.bin", FA_OPEN_ALWAYS | FA_WRITE);
     
-    // Read each logged data block from flash to determine how long it is.
-    do 
-    {
-        // Read the data log entry type.
-        this->m25p80->ReadBlock (this->address, buffer, 1);
-
-        // Based on the log entry type, we'll skip over the data contained in the entry.
-        switch (buffer[0]) 
-        {
-            case SYSTEM_BOOTED:
-                this->address += 1;
-                break;
-    
-            case GPS_FIX:
-                this->address += 24;
-                break;
-    
-            case TIME_STAMP:
-                this->address += 7;
-                break;
-
-            case 0xff:
-                endFound = true;
-                break;
-
-            default:
-                ++this->address;
-        } // END switch
-    } while (this->address < 0x100000 && !endFound);
+    // Read the archived wind data into the array
+    windLogger.ReadFile((void *)windData);
 
     this->index = 0;    
+}
+
+/**
+ * Called once per second to update the wind data table.  After burst, call
+ * to update the landing prediction.
+ *
+ * @return True if successful computing a prediction, false otherwise
+ */
+bool_t Log::UpdateWindTable() {
+	uint16_t i;
+    int32_t alt;
+    float segmentRate, distance;
+    COORD positionEstimate, next;
+
+    // Track the maximum altitude.
+    if (gps->AltitudeFeet() > maxAltitude)
+        maxAltitude = gps->AltitudeFeet();
+
+    // Calculate the landing after burst.
+    if (burstDetect) {
+		alt = gps->AltitudeFeet();
+
+        // Find the last entry in the table.
+        for (i = 0; i < NAV_BLOCKCOUNT && alt > windData[i].coord.alt; ++i);
+
+        if (i < 2)
+            return false;
+
+        --i;
+        
+		// start out at our current location
+        NavSetDegFCoord ((float)(gps->latitude / 10000000), (float)(gps->longitude / 10000000), &positionEstimate);
+
+        while (i != 0) {
+            segmentRate = ((float) (alt - windData[i].coord.alt)) / NavDescentRate((float) windData[i].coord.alt);
+            distance = windData[i].course.dist * segmentRate / (float) windData[i].timeInterval;
+
+            NavDistRadial (&positionEstimate, &next, distance, windData[i].course.head);
+            positionEstimate = next;
+
+            alt = windData[i].coord.alt;
+            --i;
+        }
+
+        this->landingZone = positionEstimate;
+
+        return true;
+    } // END if
+
+    // Set a flag to indicate we have a burst condition.
+    if (gps->AltitudeFeet() + 500 < maxAltitude) {
+        burstDetect = true;
+        return true;
+    }
+
+
+    // Find the last entry in the table.
+    for (i = 0; i < NAV_BLOCKCOUNT && windData[i].coord.alt != 0; ++i);
+
+    if (i == NAV_BLOCKCOUNT)
+        return false;
+
+    this->index = i;
+
+    // Calculate the wind speed for this altitude interval.
+    if (gps->AltitudeFeet() > windData[i - 1].coord.alt + NAV_INTERVAL) {
+        // Save the current position as the end point for this segment.
+        NavSetDegFCoord((float)(gps->latitude / 10000000), (float)(gps->longitude / 10000000), &windData[i].coord);
+        windData[i].coord.alt = gps->AltitudeFeet();
+        windData[i].timeStamp = gps->hours * 3600 + gps->minutes * 60 + gps->seconds;
+
+        // Calcualte the course and heading from the last element in this segment.
+        NavCourse (&windData[i - 1].coord, &windData[i].coord, &windData[i].course);
+
+        // Calculate the time interval for this segment.
+        windData[i].timeInterval = (uint16_t) (windData[i].timeStamp - windData[i - 1].timeStamp);
+    }
+    return false;
+}
+
+
+
+/**
+ *    Calculate the distance and heading from <b>coord1</b> to <b>coord2</b>.  The
+ *    coordinate values must be in radians.  The result saved in <b>course</b> is
+ *    in units of radians.
+ *
+ *    @param coord1 start location
+ *    @param coord2 end location
+ *    @param course distance and heading
+ */
+void Log::NavCourse (COORD *coord1, COORD *coord2, COURSE *course)
+{
+    float d, lat1, lon1, lat2, lon2, angle;
+
+    lat1 = coord1->lat;
+    lon1 = coord1->lon;
+
+    lat2 = coord2->lat;
+    lon2 = coord2->lon;
+
+    d = 2 * asin(sqrt( sin((lat1-lat2)/2)*sin((lat1-lat2)/2) + cos(lat1)*cos(lat2)*sin((lon1-lon2)/2)*sin((lon1-lon2)/2) ));
+    course->dist = d;
+
+    if (d < 0.00000027) {
+        course->head = 0;
+        return;
+    }
+
+    if (sin(lon2-lon1) < 0) {
+        angle = (sin(lat2)-sin(lat1)*cos(d)) / (sin(d)*cos(lat1));
+
+        if (angle < -1.0)
+            angle = -1.0;
+
+        if (angle > 1.0)
+            angle = 1.0;
+
+        course->head = acos(angle);
+    } else {
+        angle = (sin(lat2)-sin(lat1)*cos(d)) / (sin(d)*cos(lat1));
+
+        if (angle < -1.0)
+            angle = -1.0;
+
+        if (angle > 1.0)
+            angle = 1.0;
+
+        course->head = 2*PI - acos( angle );
+    }
+}
+
+/**
+ *   Add the vector with a length <b>d</b> and true course <b>tc</b> to the
+ *   lat/long <b>current</b> and save the result in <b>next</b>.
+ *
+ *   @param current lat/lon coordinates
+ *   @param next lat/lon after vector added
+ *   @param d distance in radians
+ *   @param tc true course in radians
+ */
+void Log::NavDistRadial (COORD *current, COORD *next, float d, float tc)
+{
+    next->lat = asin(sin(current->lat) * cos(d) + cos(current->lat) * sin(d) * cos(tc));
+    next->lon = current->lon - asin(sin(tc) * sin(d) / cos(next->lat));
+}
+
+/**
+ * Initialize the wind data once the balloon has launched
+ */
+void Log::NavLaunch()
+{
+    this->Erase();
+
+    NavSetDegFCoord(gps->latitude, gps->longitude, &windData[0].coord);
+    windData[0].coord.alt = gps->AltitudeFeet();
+    windData[0].timeStamp = gps->hours * 3600 + gps->minutes * 60 + gps->seconds;
+}
+
+/**
+ *   Convert coordinates from radians to decimal degrees.
+ *
+ *   @param coord pointer to coordinate pair
+ */
+void Log::NavRadToDeg (COORD *coord)
+{
+    coord->lat *= 180.0 / PI;
+    coord->lon *= -180.0 / PI;
+}
+
+/**
+ *   Convert coordinates (lat, lon) to radians and store in coord.
+ *
+ *   @param lat in degrees where north is positive
+ *   @param lon in degrees where east is positive
+ *   @param coord coordinate pair in radians
+ */
+void Log::NavSetDegFCoord (float lat, float lon, COORD *coord)
+{
+    coord->lat = lat * PI / 180.0;
+    coord->lon = -lon * PI / 180.0;
+}
+
+/**
+ *   Use a 4th order polynomial to calculate the descent rate in feet/second.
+ *
+ *   @param alt altitude in feet
+ *
+ *   @return descent in feet per second
+ */
+float Log::NavDescentRate (float alt)
+{
+    return -1E-18*alt*alt*alt*alt + 3E-13*alt*alt*alt - 8E-09*alt*alt + 0.0004*alt + 13.522;  // 4th order ANSR-13
+
+//    return -5E-18*alt*alt*alt*alt + 9E-13*alt*alt*alt - 4E-08*alt*alt + 0.0010*alt + 9.3197; // 4th order ANSR-9
+//    return -1E-18*alt*alt*alt*alt + 4E-13*alt*alt*alt - 2E-08*alt*alt + 0.0012*alt + 6.0886;  // 4th order ANSR-8
 }

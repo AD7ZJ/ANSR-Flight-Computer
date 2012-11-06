@@ -28,7 +28,6 @@
 
 int main(void)
 {
-    APRSBeacon aprsBeacon;
-    
-    aprsBeacon.Run();  
+    // run the singlton instance of the main application class
+    APRSBeacon::GetInstance()->Run();
 }

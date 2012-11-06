@@ -89,6 +89,13 @@ APRSBeacon::APRSBeacon()
     this->peakAltitude = 0;
     this->startGPSTime = 0;
     this->statusLEDOffTick = 0;
+
+    this->timer100msFlag = false;
+    this->timer10sFlag = false;
+    this->timer1sFlag = false;
+    this->ms100Elapsed = 0;
+    this->msElapsed = 0;
+    this->sElapsed = 0;
 }
 
 /**
@@ -145,8 +152,8 @@ void APRSBeacon::ScheduleMessage()
         // Get a pointer to the GPS data set.
         GPSData *gpsData = this->gps->Data();
 
-        //FIXME: Log the fix information.
-        Log::GetInstance()->GPSFix (gpsData);
+        // update the wind data table
+        Log::GetInstance()->UpdateWindTable();
 
         // Process certain elements when we have a 3D fix.
         if (gpsData->fixType == GPSData::Fix3D)
@@ -159,7 +166,7 @@ void APRSBeacon::ScheduleMessage()
             if (this->startGPSTime == 0)
             {
                 this->startGPSTime = gpsData->TimeSinceEpoch();
-                Log::GetInstance()->TimeStamp(gpsData);
+                //Log::GetInstance()->TimeStamp(gpsData);
             }
         }
 
@@ -188,17 +195,17 @@ void APRSBeacon::ScheduleMessage()
         } // END switch
 
         // Engineering data set reported
-        sprintf (buffer, "%ld %s %02d:%02d:%02d %d/%d/%d ", SystemControl::GetTick(), (gpsData->fixType == GPSData::NoFix ? "no fix" : (gpsData->fixType == GPSData::Fix2D ? "2D fix" : "3D fix")), gpsData->hours, gpsData->minutes, gpsData->seconds, gpsData->month, gpsData->day, gpsData->year);
-        //UART0::GetInstance()->Write (buffer);
+        sprintf (buffer, "%s Time:%02d:%02d:%02d %d/%d/%d\r\n", (gpsData->fixType == GPSData::NoFix ? "no fix" : (gpsData->fixType == GPSData::Fix2D ? "2D fix" : "3D fix")), gpsData->hours, gpsData->minutes, gpsData->seconds, gpsData->month, gpsData->day, gpsData->year);
+        UART0::GetInstance()->Write (buffer);
 
-        sprintf (buffer, "%ld %ld %ld %ld %d %d 0x%x ", gpsData->weekNumber, gpsData->timeOfWeek, gpsData->latitude, gpsData->longitude, gpsData->dop, gpsData->trackedSats, gpsData->navType);
-        //UART0::GetInstance()->Write (buffer);
+        sprintf (buffer, "Lat:%ld Long:%ld Dop:%d Tracked Sats:%d\r\n", gpsData->latitude, gpsData->longitude, gpsData->dop, gpsData->trackedSats);
+        UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "%d deg @ %ld knots ", gpsData->heading, gpsData->SpeedKnots());
-        //UART0::GetInstance()->Write (buffer);
+        UART0::GetInstance()->Write (buffer);
 
-        sprintf (buffer, "%ld", gpsData->AltitudeFeet());
-        //UART0::GetInstance()->WriteLine (buffer);
+        sprintf (buffer, "Alt:%ld ft", gpsData->AltitudeFeet());
+        UART0::GetInstance()->WriteLine (buffer);
     } // END if
 }
 
@@ -206,6 +213,25 @@ void APRSBeacon::SystemTimerTick()
 {
     //IOPorts::RadioPTT(true);
     disk_timerproc();
+	APRSBeacon::GetInstance()->msElapsed++;
+	
+	// set 100ms, 1s, and 10s flags used for timing in the main loop
+	if(APRSBeacon::GetInstance()->msElapsed >= 100) {
+	    APRSBeacon::GetInstance()->ms100Elapsed++;
+	    APRSBeacon::GetInstance()->msElapsed = 0;
+	    APRSBeacon::GetInstance()->timer100msFlag = true;
+	}
+	
+	if(APRSBeacon::GetInstance()->ms100Elapsed >= 10) {
+	    APRSBeacon::GetInstance()->sElapsed++;
+	    APRSBeacon::GetInstance()->ms100Elapsed = 0;
+	    APRSBeacon::GetInstance()->timer1sFlag = true;
+	}
+
+	if(APRSBeacon::GetInstance()->sElapsed >= 10) {
+	    APRSBeacon::GetInstance()->sElapsed = 0;
+	    APRSBeacon::GetInstance()->timer10sFlag = true;
+	}
 }
 
 
@@ -234,11 +260,10 @@ void APRSBeacon::Run()
     UART0::GetInstance()->Enable(UART0::BaudRate57600);
     UART1::GetInstance()->Enable(UART1::BaudRate9600, UART1::Control8N1);
 
-    // SPI 0 is the CMX867A MODEM, SPI 1 is the M25P80 flash memory.
+    // SPI 0 is the CMX867A MODEM.  SPI 1 is the SD card which is setup by the SDlogger class
     SPI0::GetInstance()->Enable();
-    //-SPI1::GetInstance()->Enable(SPI1::MaxClock, SPI1::DataSize_8Bits, SPI1::CPOL0_CPHA0);
 
-    // I2C Bus 0 is the temp sensor, real time clock, and 3D MEMS sensor.
+    // I2C Bus 0 is the temp sensor
     I2C0::GetInstance()->Enable();
 
     // Enable and set the output DAC voltage to 0 VDC.
@@ -252,7 +277,7 @@ void APRSBeacon::Run()
     LM92::GetInstance()->Enable();
 
     // Setup the flash memory for logging.
-    //Log::GetInstance()->Enable();
+    Log::GetInstance()->Enable();
 
     // Enable the RTC
     RTC::GetInstance()->Enable();
@@ -270,13 +295,13 @@ void APRSBeacon::Run()
     SystemControl::Sleep(1000);
 
     // Show a startup message on the serial port.
-    UART0::GetInstance()->WriteLine (">ANSR Flight Computer v0.2 booted!");
+    UART0::GetInstance()->WriteLine (">ANSR Flight Computer v0.3 booted!");
 
     // Turn off the LEDs.
     IOPorts::StatusLED (IOPorts::LEDYellow, false);
 
     // Transmit a startup message.
-    this->afsk->Transmit (">ANSR Flight Computer v0.1");
+    this->afsk->Transmit (">ANSR Flight Computer v0.3");
 
     //Log::GetInstance()->SystemBooted();
 
@@ -303,31 +328,23 @@ void APRSBeacon::Run()
         // Update the waveform state machine as required.
         this->afsk->Update();
 
-        //tempLogger.LineTestHigh();
-
-        //IOPorts::RadioPTT(false);
-
         time = RTC::GetInstance()->Get();
 
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
 
-        //tempLogger.LineTestLow();
-
         //get the temp every second
-        if((Timer1::GetInstance()->GetTick() % 1000) == 0) {
-            //IOPorts::RadioPTT(true);
-            IOPorts::StatusLED(IOPorts::LEDGreen, true);
+        if(this->timer1sFlag) {
+            this->timer1sFlag = false;
+
             tempF = LM92::GetInstance()->ReadTempF();
             // write the temperature out to the SD card
-            numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d\n", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds);
+            numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul\n", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
 
             if(!tempLogger.Append(tempBuffer, numChars))
                 UART0::GetInstance()->WriteLine (">Failed to write data to SD card");
 
             UART0::GetInstance()->WriteLine(tempBuffer);
-
-            IOPorts::StatusLED(IOPorts::LEDGreen, false);
 
             IOPorts::StatusLED(IOPorts::LEDRed, true);
             tempLogger.SyncDisk();

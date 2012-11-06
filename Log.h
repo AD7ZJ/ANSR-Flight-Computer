@@ -27,6 +27,7 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include "SDLogger.h"
 /**
  *  @defgroup application APRS Beacon Application
  *
@@ -48,11 +49,48 @@ public:
     void SystemBooted();
     void TimeStamp (const GPSData *gps);
     
-    static Log *GetInstance();        
+    static Log *GetInstance();
+    bool_t UpdateWindTable();
     
 private:
+    SDLogger windLogger;
+
+    typedef struct {
+        /// lat and long in degrees
+        float lat, lon;
+        /// altitude in ft
+        int32_t alt;
+    } COORD;
+
+    typedef struct {
+        float dist, head, trackError;
+    } COURSE;
+
+    typedef struct {
+        uint32_t timeStamp;
+        uint16_t timeInterval;
+        COURSE course;
+        COORD coord;
+    } NAV_WINDDATA;
+
+    /// Predicted landing coordinate
+    COORD landingZone;
+
     /// Number of bytes to buffer before writing to flash memory.
     static const uint32_t WriteBufferSize = 40;
+
+    static const float PI = 3.14159;
+
+    /// How much altitude difference in ft before we log another wind speed calculation
+    static const uint16_t NAV_INTERVAL = 500;
+
+    /// how many wind speed entries are allowed
+    static const uint16_t NAV_BLOCKCOUNT = 200;
+
+    /// array containing the
+    NAV_WINDDATA windData[NAV_BLOCKCOUNT];
+
+    GPSData * gps;
 
     /// Enumerated type that describes the type of record.
     typedef enum
@@ -74,9 +112,13 @@ private:
     void WriteUint16 (uint16_t data);
     void WriteUint32 (uint32_t data);
     void WriteBlock (const uint8_t *data, uint32_t length);
-    
-    /// Last used address in flash memory.
-    uint32_t address;
+
+    void NavCourse (COORD *coord1, COORD *coord2, COURSE *course);
+    void NavLaunch();
+    void NavRadToDeg (COORD *coord);
+    void NavSetDegFCoord (float lat, float lon, COORD *coord);
+    void NavDistRadial (COORD *current, COORD *next, float d, float tc);
+    float NavDescentRate (float alt);
     
     /// Current index into log buffer.
     uint32_t index;
@@ -84,8 +126,10 @@ private:
     /// Temporary buffer that holds data before it is written to flash device.
     uint8_t buffer[WriteBufferSize];
     
-    /// Object to control flash memory chip.
-    M25P80 *m25p80;
+    /// Maximum altitude in flight
+    int32_t maxAltitude;
+
+    bool_t burstDetect;
 };
 
 /** @} */

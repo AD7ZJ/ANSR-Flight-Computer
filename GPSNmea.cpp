@@ -252,8 +252,8 @@ void GPSNmea::ProcessGPGGA(uint8_t *pData) {
     uint8_t pField[MAXFIELD];
     char pBuff[10];
 
-    // Time
-    if (GetField(pData, pField, 0, MAXFIELD)) {
+    // Time (currently not used)
+    /*if (GetField(pData, pField, 0, MAXFIELD)) {
         // Hour
         pBuff[0] = pField[0];
         pBuff[1] = pField[1];
@@ -271,10 +271,10 @@ void GPSNmea::ProcessGPGGA(uint8_t *pData) {
         pBuff[1] = pField[5];
         pBuff[2] = '\0';
         data.seconds = atoi(pBuff);
-    }
+    } */
 
-    // Latitude
-    if (GetField(pData, pField, 1, MAXFIELD)) {
+    // Latitude (currently not used)
+    /*if (GetField(pData, pField, 1, MAXFIELD)) {
         data.latitude = lroundf(10000000 * atof((char *) pField + 2) / 60.0);
         pField[2] = '\0';
         data.latitude += lroundf(10000000 * atof((char *) pField));
@@ -285,7 +285,7 @@ void GPSNmea::ProcessGPGGA(uint8_t *pData) {
             data.latitude = -data.latitude;
     }
 
-    // Longitude
+    // Longitude (currently not used)
     if (GetField(pData, pField, 3, MAXFIELD)) {
         data.longitude = lroundf(10000000 * atof((char *) pField + 3) / 60.0);
         pField[3] = '\0';
@@ -294,12 +294,7 @@ void GPSNmea::ProcessGPGGA(uint8_t *pData) {
     if (GetField(pData, pField, 4, MAXFIELD)) {
         if (pField[0] == 'W')
             data.longitude = -data.longitude;
-    }
-
-    // GPS fix type
-    if (GetField(pData, pField, 5, MAXFIELD)) {
-        data.fixType = (pField[0] == '0') ? data.NoFix : data.Fix3D ;
-    }
+    } */
 
     // Satellites in use
     if (GetField(pData, pField, 6, MAXFIELD)) {
@@ -328,9 +323,7 @@ void GPSNmea::ProcessGPRMC(uint8_t *pData)
     CHAR pBuff[10];
     BYTE pField[MAXFIELD];
 
-    //
     // Time
-    //
     if(GetField(pData, pField, 0, MAXFIELD))
     {
         // Hour
@@ -355,8 +348,16 @@ void GPSNmea::ProcessGPRMC(uint8_t *pData)
     //
     // Data valid
     //
-    if(GetField(pData, pField, 1, MAXFIELD))
-        data.fixType = (pField[0] == 'A') ? data.Fix3D : data.NoFix;
+    if(GetField(pData, pField, 1, MAXFIELD)) {
+        if(pField[0] == 'A') {
+            if(data.altitude > 0)
+                data.fixType = data.Fix3D;
+            else
+                data.fixType = data.Fix2D;
+        }
+        else
+            data.fixType = data.NoFix;
+    }
 
     //
     // latitude
@@ -439,7 +440,7 @@ void GPSNmea::ProcessGPRMC(uint8_t *pData)
         pBuff[1] = pField[5];
         pBuff[2] = '\0';
         data.year = atoi(pBuff);
-        data.year += 2000;             // make 4 digit date -- What assumptions should be made here?
+        data.year += 2000;             // make 4 digit date
     }
 
     // Set the data-ready flag

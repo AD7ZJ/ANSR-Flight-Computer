@@ -50,6 +50,20 @@ public:
     
     ToneGenerator testTone;
 
+    /// variables used to count the elapsed time
+    volatile uint16_t msElapsed;
+    volatile uint16_t ms100Elapsed;
+    volatile uint16_t sElapsed;
+
+    /// flag indicating 100ms is up
+    volatile bool_t timer100msFlag;
+
+    /// flag indicating 1s is up
+    volatile bool_t timer1sFlag;
+
+    /// flag indicating 10s is up
+    volatile bool_t timer10sFlag;
+
 private:
     void ScheduleMessage();
     void SystemTimerTick();
@@ -76,6 +90,8 @@ private:
     uint32_t statusLEDOffTick;
 
     uint32_t millisecondTimer;
+
+
 };
 
 /** @} */
