@@ -48,15 +48,19 @@ public:
     void GPSFix (const GPSData *gps);
     void SystemBooted();
     void TimeStamp (const GPSData *gps);
-    
+    void NavLaunch();
     static Log *GetInstance();
     bool_t UpdateWindTable();
-    
+    bool_t PredictLanding(GPSData * landingPrediction);
+
+    /// true when burst has been detected
+    bool_t burstDetect;
+
 private:
     SDLogger windLogger;
 
     typedef struct {
-        /// lat and long in degrees
+        /// lat and long, can be either degrees or radians
         float lat, lon;
         /// altitude in ft
         int32_t alt;
@@ -114,7 +118,6 @@ private:
     void WriteBlock (const uint8_t *data, uint32_t length);
 
     void NavCourse (COORD *coord1, COORD *coord2, COURSE *course);
-    void NavLaunch();
     void NavRadToDeg (COORD *coord);
     void NavSetDegFCoord (float lat, float lon, COORD *coord);
     void NavDistRadial (COORD *current, COORD *next, float d, float tc);
@@ -128,8 +131,6 @@ private:
     
     /// Maximum altitude in flight
     int32_t maxAltitude;
-
-    bool_t burstDetect;
 };
 
 /** @} */

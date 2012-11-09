@@ -179,16 +179,17 @@ void FlightComputer::ScheduleMessage()
 
         switch (gpsData->seconds)
         {
-            case 0:
-            case 30:
+            case 15:
                 StatusPacket (this->gps->Data(), buffer);
                 this->afsk->Transmit (buffer);
                 break;
 
-            case 5:
             case 25:
-            case 35:
-            case 55:
+                // transmit a landing prediction packet
+
+            case 0:
+            case 30:
+                // transmit current location
                 micEncoder.Encode (this->gps->Data());
                 this->afsk->Transmit (micEncoder.GetInformationField(), micEncoder.GetDestAddress());
                 break;
@@ -196,41 +197,62 @@ void FlightComputer::ScheduleMessage()
 
         // Engineering data set reported
         sprintf (buffer, "%s Time:%02d:%02d:%02d %d/%d/%d\r\n", (gpsData->fixType == GPSData::NoFix ? "no fix" : (gpsData->fixType == GPSData::Fix2D ? "2D fix" : "3D fix")), gpsData->hours, gpsData->minutes, gpsData->seconds, gpsData->month, gpsData->day, gpsData->year);
-        UART0::GetInstance()->Write (buffer);
+        //UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "Lat:%ld Long:%ld Dop:%d Tracked Sats:%d\r\n", gpsData->latitude, gpsData->longitude, gpsData->dop, gpsData->trackedSats);
-        UART0::GetInstance()->Write (buffer);
+        //UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "%d deg @ %ld knots ", gpsData->heading, gpsData->SpeedKnots());
-        UART0::GetInstance()->Write (buffer);
+        //UART0::GetInstance()->Write (buffer);
 
         sprintf (buffer, "Alt:%ld ft", gpsData->AltitudeFeet());
         UART0::GetInstance()->WriteLine (buffer);
+
+        UART0::GetInstance()->WriteLine ("AscentRate: %d", this->AscentRate());
     } // END if
 }
 
+/**
+ * Returns the balloon's ascent rate in FPM averaged over 10 seconds
+ */
+int16_t FlightComputer::AscentRate() {
+    // average gain in ft/s
+    int32_t sumAltGains = 0;
+    for (int i = 0; i < 9; i++) {
+        sumAltGains += altitudeList_[i] - altitudeList_[i+1];
+    }
+    return (sumAltGains * 60) / 10;
+}
+
+/**
+ * Function called every 1 ms to generate the application's timer tick
+ */
 void FlightComputer::SystemTimerTick()
 {
-    //IOPorts::RadioPTT(true);
+    // Get a pointer to the application's instance
+    FlightComputer * fc = FlightComputer::GetInstance();
+
+    // run the 1ms task necessary for the SD card library
     disk_timerproc();
-	FlightComputer::GetInstance()->msElapsed++;
+
+    fc->msElapsed++;
 	
 	// set 100ms, 1s, and 10s flags used for timing in the main loop
-	if(FlightComputer::GetInstance()->msElapsed >= 100) {
-	    FlightComputer::GetInstance()->ms100Elapsed++;
-	    FlightComputer::GetInstance()->msElapsed = 0;
-	    FlightComputer::GetInstance()->timer100msFlag = true;
+	if(fc->msElapsed >= 100) {
+	    fc->ms100Elapsed++;
+	    fc->msElapsed = 0;
+	    fc->timer100msFlag = true;
 	}
 	
-	if(FlightComputer::GetInstance()->ms100Elapsed >= 10) {
-	    FlightComputer::GetInstance()->sElapsed++;
-	    FlightComputer::GetInstance()->ms100Elapsed = 0;
-	    FlightComputer::GetInstance()->timer1sFlag = true;
+	if(fc->ms100Elapsed >= 10) {
+	    fc->sElapsed++;
+	    fc->ms100Elapsed = 0;
+	    fc->timer1sFlag = true;
 	}
 
-	if(FlightComputer::GetInstance()->sElapsed >= 10) {
-	    FlightComputer::GetInstance()->sElapsed = 0;
-	    FlightComputer::GetInstance()->timer10sFlag = true;
+	if(fc->sElapsed >= 10) {
+	    fc->sElapsed = 0;
+	    fc->timer10sFlag = true;
 	}
 }
 
@@ -278,6 +300,7 @@ void FlightComputer::Run()
 
     // Setup the flash memory for logging.
     Log::GetInstance()->Enable();
+    Log::GetInstance()->NavLaunch();
 
     // Enable the RTC
     RTC::GetInstance()->Enable();
@@ -333,19 +356,29 @@ void FlightComputer::Run()
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
 
-        //get the temp every second
+        // 1 second tasks
         if(this->timer1sFlag) {
             this->timer1sFlag = false;
 
             tempF = LM92::GetInstance()->ReadTempF();
             // write the temperature out to the SD card
-            numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul\n", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
+            numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
 
             if(!tempLogger.Append(tempBuffer, numChars))
                 UART0::GetInstance()->WriteLine (">Failed to write data to SD card");
 
-            UART0::GetInstance()->WriteLine(tempBuffer);
+            //UART0::GetInstance()->WriteLine(tempBuffer);
 
+            // Store the current altitude in an array to calculate the ascent rate
+            for(int i = 9; i > 0; i--)
+                // shift the array one left
+                altitudeList_[i] = altitudeList_[i - 1];
+            altitudeList_[0] = gps->Data()->AltitudeFeet();
+        }
+
+        // 10 second tasks
+        if(this->timer10sFlag) {
+            this->timer10sFlag = false;
             IOPorts::StatusLED(IOPorts::LEDRed, true);
             tempLogger.SyncDisk();
             IOPorts::StatusLED(IOPorts::LEDRed, false);

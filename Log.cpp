@@ -222,7 +222,7 @@ bool_t Log::UpdateWindTable() {
     // Calculate the wind speed for this altitude interval.
     if (gps->AltitudeFeet() > windData[i - 1].coord.alt + NAV_INTERVAL) {
         // Save the current position as the end point for this segment.
-        NavSetDegFCoord((float)(gps->latitude / 10000000), (float)(gps->longitude / 10000000), &windData[i].coord);
+        NavSetDegFCoord(((float)gps->latitude / 10000000), ((float)gps->longitude / 10000000), &windData[i].coord);
         windData[i].coord.alt = gps->AltitudeFeet();
         windData[i].timeStamp = gps->hours * 3600 + gps->minutes * 60 + gps->seconds;
 
@@ -231,10 +231,28 @@ bool_t Log::UpdateWindTable() {
 
         // Calculate the time interval for this segment.
         windData[i].timeInterval = (uint16_t) (windData[i].timeStamp - windData[i - 1].timeStamp);
+
+        //FIXME write out the interval
+        UART0::GetInstance()->WriteLine("%f radians in %d seconds\r\n", windData[i].course.dist, windData[i].timeInterval);
     }
     return false;
 }
 
+bool_t Log::PredictLanding(GPSData * landingPrediction) {
+    // convert coordinates to degrees
+    NavRadToDeg (&landingZone);
+
+    // set the current time
+    landingPrediction->hours = gps->hours;
+    landingPrediction->minutes = gps->minutes;
+    landingPrediction->seconds = gps->seconds;
+
+    landingPrediction->latitude = (int32_t)(landingZone.lat * 10000000);
+    landingPrediction->longitude = (int32_t)(landingZone.lon * 10000000);
+    landingPrediction->altitude = (landingZone.alt * 30.48);
+
+    return true;
+}
 
 
 /**

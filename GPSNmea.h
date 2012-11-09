@@ -94,6 +94,12 @@ private:
 	/// Offset in seconds between GPS and UTC time.
 	uint32_t utcOffset;
 
+	/// last altitude in ft
+	uint32_t lastAltitude;
+
+	/// last timestamp in seconds
+	uint32_t lastTimestamp;
+
 	typedef enum
 	{
 		STARTOFMESSAGE,

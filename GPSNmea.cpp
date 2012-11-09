@@ -314,7 +314,7 @@ void GPSNmea::ProcessGPGGA(uint8_t *pData) {
         data.altitude = lroundf(atof((CHAR *) pField) * 100);
     }
 
-    // Set the data-ready flag
+    // Set the data-ready flag.
     this->dataReadyFlag = true;
 }
 
@@ -442,7 +442,4 @@ void GPSNmea::ProcessGPRMC(uint8_t *pData)
         data.year = atoi(pBuff);
         data.year += 2000;             // make 4 digit date
     }
-
-    // Set the data-ready flag
-    this->dataReadyFlag = true;
 }
