@@ -50,8 +50,6 @@ public:
     
     ToneGenerator testTone;
 
-    int16_t AscentRate();
-
     /// variables used to count the elapsed time
     volatile uint16_t msElapsed;
     volatile uint16_t ms100Elapsed;
@@ -66,8 +64,14 @@ public:
     /// flag indicating 10s is up
     volatile bool_t timer10sFlag;
 
+    bool_t launchDetect;
+
     /// GPDData object indicating the predicted landing position
     GPSData landingPrediction;
+
+    void LandingPrediction();
+
+    int32_t AscentRate();
 
 private:
     void ScheduleMessage();
@@ -96,7 +100,8 @@ private:
 
     uint32_t millisecondTimer;
 
-    int32_t altitudeList_[10];
+    // counts the number of ascent rate readings that have been above a certain threshold
+    uint8_t posAscentCount;
 };
 
 /** @} */

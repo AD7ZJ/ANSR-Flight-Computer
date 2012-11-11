@@ -51,8 +51,7 @@ Log::Log()
  */
 void Log::SystemBooted()
 {
-    Type (SYSTEM_BOOTED);
-    Flush();
+    //FIXME: Log a 'system booted' message to the syslog on the SD card here
 }
 
 /**
@@ -62,23 +61,7 @@ void Log::SystemBooted()
  */
 void Log::GPSFix (const GPSData *gps)
 {
-    Type (GPS_FIX);
-    
-    WriteUint8 (gps->hours);
-    WriteUint8 (gps->minutes);
-    WriteUint8 (gps->seconds);
-    
-    WriteBlock (gps->rawLatitude, sizeof(gps->rawLatitude));
-    WriteBlock (gps->rawLongitude, sizeof(gps->rawLongitude));
-    WriteBlock (gps->rawAltitude, sizeof(gps->rawAltitude));
-
-    WriteBlock (gps->rawSpeedHeading, sizeof(gps->rawSpeedHeading));
-    WriteUint16 (gps->navType);
-    WriteUint8 (gps->dop);
-
-    WriteUint8 (gps->trackedSats);
-    
-    Flush();    
+    //FIXME: Log a GGA and RMC string to the SD card here
 }
 
 
@@ -186,7 +169,7 @@ bool_t Log::UpdateWindTable() {
         --i;
         
 		// start out at our current location
-        NavSetDegFCoord ((float)(gps->latitude / 10000000), (float)(gps->longitude / 10000000), &positionEstimate);
+        NavSetDegFCoord (((float)gps->latitude / 10000000), ((float)gps->longitude / 10000000), &positionEstimate);
 
         while (i != 0) {
             segmentRate = ((float) (alt - windData[i].coord.alt)) / NavDescentRate((float) windData[i].coord.alt);
@@ -232,6 +215,9 @@ bool_t Log::UpdateWindTable() {
         // Calculate the time interval for this segment.
         windData[i].timeInterval = (uint16_t) (windData[i].timeStamp - windData[i - 1].timeStamp);
 
+        // save the ascent rate
+        NewAscentRate(((gps->AltitudeFeet() - windData[i - 1].coord.alt) * 60) / windData[i].timeInterval);
+
         //FIXME write out the interval
         UART0::GetInstance()->WriteLine("%f radians in %d seconds\r\n", windData[i].course.dist, windData[i].timeInterval);
     }
@@ -249,9 +235,38 @@ bool_t Log::PredictLanding(GPSData * landingPrediction) {
 
     landingPrediction->latitude = (int32_t)(landingZone.lat * 10000000);
     landingPrediction->longitude = (int32_t)(landingZone.lon * 10000000);
-    landingPrediction->altitude = (landingZone.alt * 30.48);
+    landingPrediction->altitude = 0;
 
     return true;
+}
+
+/**
+ * Add the current ascent rate to the ascent rate list.  This permits low pass filtering
+ * later on.
+ *
+ * @param rawRate New value for the ascent rate in ft/min
+ */
+void Log::NewAscentRate(int32_t rawRate) {
+    for(int i = (ASCENT_RATE_LENGTH - 1); i > 0; i--)
+        // shift the array one left
+        ascentRates_[i] = ascentRates_[i - 1];
+
+    // add the new entry to the beginning of the array
+    ascentRates_[0] = rawRate;
+}
+
+/**
+ * Returns the filtered ascent rate
+ *
+ * @return Ascent rate in ft/min
+ */
+int32_t Log::FilteredAscentRate() {
+    // average gain in ft/min
+    int32_t sumAltGains = 0;
+    for (int i = 0; i < ASCENT_RATE_LENGTH; i++) {
+        sumAltGains += ascentRates_[i];
+    }
+    return sumAltGains / ASCENT_RATE_LENGTH;
 }
 
 
@@ -323,11 +338,12 @@ void Log::NavDistRadial (COORD *current, COORD *next, float d, float tc)
 /**
  * Initialize the wind data once the balloon has launched
  */
-void Log::NavLaunch()
+void Log::InitWindLog()
 {
     this->Erase();
+    this->burstDetect = false;
 
-    NavSetDegFCoord(gps->latitude, gps->longitude, &windData[0].coord);
+    NavSetDegFCoord(((float)gps->latitude / 10000000), ((float)gps->longitude / 10000000), &windData[0].coord);
     windData[0].coord.alt = gps->AltitudeFeet();
     windData[0].timeStamp = gps->hours * 3600 + gps->minutes * 60 + gps->seconds;
 }

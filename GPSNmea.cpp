@@ -151,7 +151,8 @@ void GPSNmea::Update() {
             else
                 receivedChecksum |= (value - 'A' + 10);
 
-            if (calcChecksum == receivedChecksum)
+            //FIXME: re-add verifying the checksum after testing is finished
+            //if (calcChecksum == receivedChecksum)
                 ProcessCommand(commandBuffer, dataBuffer);
 
             gpsParseState = STARTOFMESSAGE;

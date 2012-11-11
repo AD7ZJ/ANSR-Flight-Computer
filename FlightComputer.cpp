@@ -96,6 +96,7 @@ FlightComputer::FlightComputer()
     this->ms100Elapsed = 0;
     this->msElapsed = 0;
     this->sElapsed = 0;
+    this->launchDetect = false;
 }
 
 /**
@@ -132,6 +133,15 @@ void FlightComputer::StatusPacket(const GPSData *gps, char *text)
     strcat (text, "www.ansr.org\015");
 }
 
+void FlightComputer::LandingPrediction() {
+    char buffer[120];
+    if(Log::GetInstance()->burstDetect) {
+        Log::GetInstance()->PredictLanding(&landingPrediction);
+        NMEA::GPGGA(&landingPrediction, buffer);
+        UART0::GetInstance()->WriteLine(buffer);
+    }
+}
+
 /**
  * Generate an APRS packet based on the current GPS time.
  */
@@ -152,9 +162,6 @@ void FlightComputer::ScheduleMessage()
         // Get a pointer to the GPS data set.
         GPSData *gpsData = this->gps->Data();
 
-        // update the wind data table
-        Log::GetInstance()->UpdateWindTable();
-
         // Process certain elements when we have a 3D fix.
         if (gpsData->fixType == GPSData::Fix3D)
         {
@@ -166,7 +173,25 @@ void FlightComputer::ScheduleMessage()
             if (this->startGPSTime == 0)
             {
                 this->startGPSTime = gpsData->TimeSinceEpoch();
-                //Log::GetInstance()->TimeStamp(gpsData);
+            }
+
+            // update the wind data table
+            Log::GetInstance()->UpdateWindTable();
+
+            // check for launch
+            if(!launchDetect) {
+                posAscentCount = posAscentCount << 1;
+                if(Log::GetInstance()->FilteredAscentRate() > 300)
+                    posAscentCount |= 0x01;
+
+                // if there's been 2 consecutive readings with a positive ascent rate
+                if((posAscentCount & 0x03) == 0x03) {
+                    launchDetect = true;
+                    // Initialize the wind data log
+                    Log::GetInstance()->InitWindLog();
+
+                    UART0::GetInstance()->WriteLine("Launch detected!");
+                }
             }
         }
 
@@ -186,7 +211,8 @@ void FlightComputer::ScheduleMessage()
 
             case 25:
                 // transmit a landing prediction packet
-
+                this->LandingPrediction();
+                break;
             case 0:
             case 30:
                 // transmit current location
@@ -208,20 +234,8 @@ void FlightComputer::ScheduleMessage()
         sprintf (buffer, "Alt:%ld ft", gpsData->AltitudeFeet());
         UART0::GetInstance()->WriteLine (buffer);
 
-        UART0::GetInstance()->WriteLine ("AscentRate: %d", this->AscentRate());
+        UART0::GetInstance()->WriteLine ("AscentRate: %d", Log::GetInstance()->FilteredAscentRate());
     } // END if
-}
-
-/**
- * Returns the balloon's ascent rate in FPM averaged over 10 seconds
- */
-int16_t FlightComputer::AscentRate() {
-    // average gain in ft/s
-    int32_t sumAltGains = 0;
-    for (int i = 0; i < 9; i++) {
-        sumAltGains += altitudeList_[i] - altitudeList_[i+1];
-    }
-    return (sumAltGains * 60) / 10;
 }
 
 /**
@@ -300,7 +314,6 @@ void FlightComputer::Run()
 
     // Setup the flash memory for logging.
     Log::GetInstance()->Enable();
-    Log::GetInstance()->NavLaunch();
 
     // Enable the RTC
     RTC::GetInstance()->Enable();
@@ -368,12 +381,6 @@ void FlightComputer::Run()
                 UART0::GetInstance()->WriteLine (">Failed to write data to SD card");
 
             //UART0::GetInstance()->WriteLine(tempBuffer);
-
-            // Store the current altitude in an array to calculate the ascent rate
-            for(int i = 9; i > 0; i--)
-                // shift the array one left
-                altitudeList_[i] = altitudeList_[i - 1];
-            altitudeList_[0] = gps->Data()->AltitudeFeet();
         }
 
         // 10 second tasks

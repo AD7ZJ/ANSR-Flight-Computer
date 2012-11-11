@@ -48,10 +48,11 @@ public:
     void GPSFix (const GPSData *gps);
     void SystemBooted();
     void TimeStamp (const GPSData *gps);
-    void NavLaunch();
+    void InitWindLog();
     static Log *GetInstance();
     bool_t UpdateWindTable();
     bool_t PredictLanding(GPSData * landingPrediction);
+    int32_t FilteredAscentRate();
 
     /// true when burst has been detected
     bool_t burstDetect;
@@ -59,6 +60,7 @@ public:
 private:
     SDLogger windLogger;
 
+    //FIXME: Most of this nav stuff should be moved into the 'Navigation' module in the arm7lib
     typedef struct {
         /// lat and long, can be either degrees or radians
         float lat, lon;
@@ -89,7 +91,10 @@ private:
     static const uint16_t NAV_INTERVAL = 500;
 
     /// how many wind speed entries are allowed
-    static const uint16_t NAV_BLOCKCOUNT = 200;
+    static const uint16_t NAV_BLOCKCOUNT = 300;
+
+    /// how many entries to store in the ascent rate table (used for filtering)
+    static const uint16_t ASCENT_RATE_LENGTH = 5;
 
     /// array containing the
     NAV_WINDDATA windData[NAV_BLOCKCOUNT];
@@ -122,7 +127,11 @@ private:
     void NavSetDegFCoord (float lat, float lon, COORD *coord);
     void NavDistRadial (COORD *current, COORD *next, float d, float tc);
     float NavDescentRate (float alt);
+    void NewAscentRate(int32_t rawRate);
     
+    // array of past altitude readings used for determing ascent rate
+    int32_t ascentRates_[ASCENT_RATE_LENGTH];
+
     /// Current index into log buffer.
     uint32_t index;
     

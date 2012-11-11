@@ -262,6 +262,10 @@ void Engineering::ProcessCommand()
                 FlightComputer::GetInstance()->testTone.SingleTone(1200, 3);
                 break;
 
+            case 'p':
+                FlightComputer::GetInstance()->LandingPrediction();
+                break;
+
             case 'd':
             	uart->WriteLine("Built: %s %s", __DATE__, __TIME__);
             	break;
