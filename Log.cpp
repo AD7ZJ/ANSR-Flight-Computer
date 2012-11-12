@@ -30,7 +30,7 @@
 static Log logSingletonObject;
 
 /**
- *  Get a pointer to the system logging object.
+ * Get a pointer to the system logging object.
  */
 Log *Log::GetInstance()
 {
@@ -51,7 +51,30 @@ Log::Log()
  */
 void Log::SystemBooted()
 {
-    //FIXME: Log a 'system booted' message to the syslog on the SD card here
+    int8_t numBytes = sprintf(buffer, "System booted!\r\n");
+    sysLogger.Append(buffer, numBytes);
+}
+
+/**
+ * Log the launch has been detected
+ */
+void Log::LaunchDetected()
+{
+    RTCTime * curTime = RTC::GetInstance()->Get();
+    int8_t numBytes = sprintf(buffer, "Launch detected at %02d:%02d:%02d\r\n", curTime->hours, curTime->minutes, curTime->seconds);
+    sysLogger.Append(buffer, numBytes);
+    UART0::GetInstance()->Write(buffer);
+}
+
+/**
+ * Log the burst has been detected
+ */
+void Log::BurstDetected()
+{
+    RTCTime * curTime = RTC::GetInstance()->Get();
+    int8_t numBytes = sprintf(buffer, "Burst detected at %02d:%02d:%02d\r\n", curTime->hours, curTime->minutes, curTime->seconds);
+    sysLogger.Append(buffer, numBytes);
+    UART0::GetInstance()->Write(buffer);
 }
 
 /**
@@ -61,22 +84,10 @@ void Log::SystemBooted()
  */
 void Log::GPSFix (const GPSData *gps)
 {
-    //FIXME: Log a GGA and RMC string to the SD card here
-}
-
-
-/**
- * Write a binary block of data to flash.
- * 
- * @param data pointer to data block
- * @param length number of bytes to write
- */
-void Log::WriteBlock (const uint8_t *data, uint32_t length)
-{
-    uint32_t i;
-    
-    for (i = 0; i < length; ++i)
-        this->buffer[this->index++] = static_cast <uint8_t> (data[i]);    
+    NMEA::GPGGA(gps, buffer);
+    nmeaLogger.Append(buffer, strlen(buffer));
+    NMEA::GPRMC(gps, buffer);
+    nmeaLogger.Append(buffer, strlen(buffer));
 }
 
 /**
@@ -86,22 +97,18 @@ void Log::Dump()
 {
     UART0::GetInstance()->WriteLine ("Wind Log Contents");
     
-    // Find the last entry in the table.
     for (int i = 0; i < NAV_BLOCKCOUNT && windData[i].coord.alt != 0; i++) {
         UART0::GetInstance()->WriteLine("alt:%l dist:%f heading:%f", windData[i].coord.alt, windData[i].course.dist, windData[i].course.head);
     }
 }
 
 /**
- *   Write the contents of the wind data field out to the SD card
+ * Write the contents of each file out to the SD card
  */
 void Log::Flush()
 {
-    // We only need to write if there is data.
-    if (this->index != 0) 
-    {
-        windLogger.WriteToFile((void *)windData, sizeof(windData));
-    } // END if
+    nmeaLogger.SyncDisk();
+    sysLogger.SyncDisk();
 }
 
 /**
@@ -132,12 +139,8 @@ void Log::Erase()
  */
 void Log::Enable()
 {
-    windLogger.Enable("wind.bin", FA_OPEN_ALWAYS | FA_WRITE);
-    
-    // Read the archived wind data into the array
-    windLogger.ReadFile((void *)windData);
-
-    this->index = 0;    
+    nmeaLogger.Enable("nmea.txt", FA_OPEN_ALWAYS | FA_WRITE);
+    sysLogger.Enable("syslog", FA_OPEN_ALWAYS | FA_WRITE);
 }
 
 /**
@@ -190,6 +193,7 @@ bool_t Log::UpdateWindTable() {
     // Set a flag to indicate we have a burst condition.
     if (gps->AltitudeFeet() + 500 < maxAltitude) {
         burstDetect = true;
+        this->BurstDetected();
         return true;
     }
 
@@ -199,8 +203,6 @@ bool_t Log::UpdateWindTable() {
 
     if (i == NAV_BLOCKCOUNT)
         return false;
-
-    this->index = i;
 
     // Calculate the wind speed for this altitude interval.
     if (gps->AltitudeFeet() > windData[i - 1].coord.alt + NAV_INTERVAL) {
@@ -224,7 +226,12 @@ bool_t Log::UpdateWindTable() {
     return false;
 }
 
-bool_t Log::PredictLanding(GPSData * landingPrediction) {
+/*
+ * Saves the landing prediction into a GPSData object
+ *
+ * @param landingPrediction Pointer to the GPSData object the prediction will be saved in
+ */
+void Log::PredictLanding(GPSData * landingPrediction) {
     // convert coordinates to degrees
     NavRadToDeg (&landingZone);
 
@@ -236,8 +243,6 @@ bool_t Log::PredictLanding(GPSData * landingPrediction) {
     landingPrediction->latitude = (int32_t)(landingZone.lat * 10000000);
     landingPrediction->longitude = (int32_t)(landingZone.lon * 10000000);
     landingPrediction->altitude = 0;
-
-    return true;
 }
 
 /**
@@ -256,7 +261,7 @@ void Log::NewAscentRate(int32_t rawRate) {
 }
 
 /**
- * Returns the filtered ascent rate
+ * Returns the low pass filtered ascent rate
  *
  * @return Ascent rate in ft/min
  */
@@ -268,6 +273,17 @@ int32_t Log::FilteredAscentRate() {
     }
     return sumAltGains / ASCENT_RATE_LENGTH;
 }
+
+/*
+ * Returns the most recent ascent rate measurement
+ *
+ * @return Ascent rate in ft/min
+ */
+int32_t Log::RawAscentRate() {
+    // return the most recent ascent rate measurement
+    return ascentRates_[0];
+}
+
 
 
 /**

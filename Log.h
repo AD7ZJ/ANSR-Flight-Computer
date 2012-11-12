@@ -49,16 +49,21 @@ public:
     void SystemBooted();
     void TimeStamp (const GPSData *gps);
     void InitWindLog();
+    void Flush();
+    void LaunchDetected();
+    void BurstDetected();
     static Log *GetInstance();
     bool_t UpdateWindTable();
-    bool_t PredictLanding(GPSData * landingPrediction);
+    void PredictLanding(GPSData * landingPrediction);
     int32_t FilteredAscentRate();
+    int32_t RawAscentRate();
 
     /// true when burst has been detected
     bool_t burstDetect;
 
 private:
-    SDLogger windLogger;
+    SDLogger nmeaLogger;
+    SDLogger sysLogger;
 
     //FIXME: Most of this nav stuff should be moved into the 'Navigation' module in the arm7lib
     typedef struct {
@@ -83,7 +88,7 @@ private:
     COORD landingZone;
 
     /// Number of bytes to buffer before writing to flash memory.
-    static const uint32_t WriteBufferSize = 40;
+    static const uint32_t WriteBufferSize = 160;
 
     static const float PI = 3.14159;
 
@@ -115,12 +120,7 @@ private:
         
     } LOG_RECORD_TYPE;
     
-    void Flush();
-    void Type (LOG_RECORD_TYPE type);
-    void WriteUint8 (uint8_t data);
-    void WriteUint16 (uint16_t data);
-    void WriteUint32 (uint32_t data);
-    void WriteBlock (const uint8_t *data, uint32_t length);
+
 
     void NavCourse (COORD *coord1, COORD *coord2, COURSE *course);
     void NavRadToDeg (COORD *coord);
@@ -131,12 +131,9 @@ private:
     
     // array of past altitude readings used for determing ascent rate
     int32_t ascentRates_[ASCENT_RATE_LENGTH];
-
-    /// Current index into log buffer.
-    uint32_t index;
     
     /// Temporary buffer that holds data before it is written to flash device.
-    uint8_t buffer[WriteBufferSize];
+    char buffer[WriteBufferSize];
     
     /// Maximum altitude in flight
     int32_t maxAltitude;

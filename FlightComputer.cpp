@@ -173,6 +173,9 @@ void FlightComputer::ScheduleMessage()
             if (this->startGPSTime == 0)
             {
                 this->startGPSTime = gpsData->TimeSinceEpoch();
+
+                // set the real-time clock
+                RTC::GetInstance()->Set(gpsData);
             }
 
             // update the wind data table
@@ -181,7 +184,7 @@ void FlightComputer::ScheduleMessage()
             // check for launch
             if(!launchDetect) {
                 posAscentCount = posAscentCount << 1;
-                if(Log::GetInstance()->FilteredAscentRate() > 300)
+                if(Log::GetInstance()->RawAscentRate() > 300)
                     posAscentCount |= 0x01;
 
                 // if there's been 2 consecutive readings with a positive ascent rate
@@ -190,7 +193,7 @@ void FlightComputer::ScheduleMessage()
                     // Initialize the wind data log
                     Log::GetInstance()->InitWindLog();
 
-                    UART0::GetInstance()->WriteLine("Launch detected!");
+                    Log::GetInstance()->LaunchDetected();
                 }
             }
         }
@@ -339,22 +342,9 @@ void FlightComputer::Run()
     // Transmit a startup message.
     this->afsk->Transmit (">ANSR Flight Computer v0.3");
 
-    //Log::GetInstance()->SystemBooted();
+    Log::GetInstance()->SystemBooted();
 
-    SDLogger gpsLogger;
-    gpsLogger.Enable("gps.bin", FA_OPEN_ALWAYS | FA_WRITE);
-
-    char gpsTestBuffer[] = "GPS log works...";
-
-    gpsLogger.Append(gpsTestBuffer, 16);
-    gpsLogger.SyncDisk();
-
-    // instantiate the SDLogger class
-    SDLogger tempLogger;
-    tempLogger.Enable("test.txt", FA_OPEN_EXISTING | FA_WRITE);
-
-	RTCTime * time;
-
+    RTCTime * time = RTC::GetInstance()->Get();
 
     for (;;)
     {
@@ -363,8 +353,6 @@ void FlightComputer::Run()
 
         // Update the waveform state machine as required.
         this->afsk->Update();
-
-        time = RTC::GetInstance()->Get();
 
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
@@ -377,17 +365,16 @@ void FlightComputer::Run()
             // write the temperature out to the SD card
             numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
 
-            if(!tempLogger.Append(tempBuffer, numChars))
-                UART0::GetInstance()->WriteLine (">Failed to write data to SD card");
-
             //UART0::GetInstance()->WriteLine(tempBuffer);
         }
 
         // 10 second tasks
         if(this->timer10sFlag) {
             this->timer10sFlag = false;
+            // log the current GPS fix
+            Log::GetInstance()->GPSFix(gps->Data());
             IOPorts::StatusLED(IOPorts::LEDRed, true);
-            tempLogger.SyncDisk();
+            Log::GetInstance()->Flush();
             IOPorts::StatusLED(IOPorts::LEDRed, false);
         }
 
