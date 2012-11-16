@@ -66,6 +66,9 @@ DLIBS = -lm
 # Define project name here
 PROJECT = FlightComputer
 
+# Define command used to fetch git version info
+GIT_VERSION = $(shell sh -c 'git describe --abbrev=8 --dirty --always')
+
 # Define linker script file here
 LDSCRIPT = lpc2148-flash.ld
 
@@ -120,6 +123,8 @@ LDFLAGS = $(MCFLAGS) -T$(LDSCRIPT) -Wl,-Map=$(PROJECT).map,--cref,--gc-sections,
 CPFLAGS += -MD -MP -MF .dep/$(@F).d
 CPPFLAGS += -MD -MP -MF .dep/$(@F).d
 
+# Make git version info available by defining __GIT_VERSION
+CPPFLAGS += -D__GIT_VERSION=\"$(GIT_VERSION)\"
 
 ##########################################################################
 # Start of makefile rules

@@ -26,17 +26,26 @@
 
 #include "main.h"
 
-/// Port 0, Bit 10 - Radio PTT (Push To Transmit).
-const uint32_t IO_P0_RADIO_PTT = (1 << 10);
+/// Port 1, Bit 22 - audio switch 1.
+const uint32_t IO_P1_AUDSW1 = (1 << 22);
 
-/// Port 0, Bit 16 - Test Point 2.
-const uint32_t IO_P0_TEST_POINT_2 = (1 << 16);
+/// Port 1, Bit 21 - audio switch 2.
+const uint32_t IO_P1_AUDSW2 = (1 << 21);
 
-/// Port 0, Bit 21 - Digital Output 2.
-const uint32_t IO_P1_OUT2 = (1 << 21);
+/// Port 1, Bit 20 - audio switch 3.
+const uint32_t IO_P1_AUDSW3 = (1 << 20);
 
-/// Port 0, Bit 22 - Digital Output 3.
-const uint32_t IO_P1_OUT3 = (1 << 22);
+/// Port 0, Bit 11 - Radio PTT (Push To Transmit).
+const uint32_t IO_P0_RADIO_PTT = (1 << 11);
+
+/// Port 1, Bit 24 - Digital output (open drain 1)
+const uint32_t IO_P1_OD_1 = (1 << 24);
+
+/// Port 0, Bit 10 - Digital output (open drain 2)
+const uint32_t IO_P0_OD_2 = (1 << 10);
+
+/// Port 1, Bit 23 - Radio frequency selection control line.
+const uint32_t IO_P1_FREQCHG = (1 << 23);
 
 /// Port 0, Bit 28 - Red chip in bi-color LED.
 const uint32_t IO_P0_LED_RED = (1 << 28);
@@ -44,17 +53,10 @@ const uint32_t IO_P0_LED_RED = (1 << 28);
 /// Port 0, Bit 29 - Green chip in bi-color LED.
 const uint32_t IO_P0_LED_GREEN = (1 << 29);
 
-/// Port 0, Bit 30 - Test Point 3.
-const uint32_t IO_P0_TEST_POINT_3 = (1 << 30);
+/// Port 0, Bit 16 - carrier det in
+const uint32_t IO_P0_CARRIERDET = (1 << 16);
 
-/// Port 1, Bit 16 - Radio power control line.
-const uint32_t IO_P1_RADIO_PWR = (1 << 16);
 
-/// Port 1, Bit 19 - Digital Output 1.
-const uint32_t IO_P1_OUT1 = (1 << 19);
-
-/// Port 1, Bit 24 - Radio frequency selection control line.
-const uint32_t IO_P1_RADIO_FREQ = (1 << 24);
 
 
 /**
@@ -65,11 +67,16 @@ void IOPorts::Enable()
     // Enable high speed GPIO on ports 0 and 1.
     SCS = 0x03;
 
-    FIO0CLR = IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_TEST_POINT_2 | IO_P0_TEST_POINT_3;
-    FIO0DIR |= (IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_TEST_POINT_2 | IO_P0_TEST_POINT_3);
+    FIO0CLR = IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_OD_2;
 
-    FIO1CLR = IO_P1_RADIO_PWR | IO_P1_OUT1 | IO_P1_RADIO_FREQ;
-    FIO1DIR |= (IO_P1_RADIO_PWR | IO_P1_OUT1 | IO_P1_RADIO_FREQ);
+    // specify input pins on P0
+    FIO0DIR |= (IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_OD_2 );
+    // specify output pins on P0
+    FIO0DIR &= ~(IO_P0_CARRIERDET);
+
+    FIO1CLR = IO_P1_AUDSW1 | IO_P1_AUDSW2 | IO_P1_AUDSW3 | IO_P1_OD_1 | IO_P1_FREQCHG;
+    // specify input pins on P1
+    FIO1DIR |= (IO_P1_AUDSW1 | IO_P1_AUDSW2 | IO_P1_AUDSW3 | IO_P1_OD_1 | IO_P1_FREQCHG);
 }
 
 /**
@@ -80,9 +87,9 @@ void IOPorts::Enable()
 void IOPorts::Port1(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_OUT1;
+        FIO1SET = IO_P1_OD_1;
     else
-        FIO1CLR = IO_P1_OUT1;
+        FIO1CLR = IO_P1_OD_1;
 }
 
 /**
@@ -93,35 +100,48 @@ void IOPorts::Port1(bool_t state)
 void IOPorts::Port2(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_OUT2;
+        FIO1SET = IO_P0_OD_2;
     else
-        FIO1CLR = IO_P1_OUT2;
+        FIO1CLR = IO_P0_OD_2;
 }
 
 /**
- * Set the control port 3 open drain output.
+ * Set audio switch 1
  *
- * @param state true to ground output; otherwise false
+ * @param state true to turn on, false to turn off
  */
-void IOPorts::Port3(bool_t state)
+void IOPorts::AudioSW1(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_OUT3;
+        FIO1SET = IO_P1_AUDSW1;
     else
-        FIO1CLR = IO_P1_OUT3;
+        FIO1CLR = IO_P1_AUDSW1;
 }
 
 /**
- * Set the state of the radio power control terminal 2 on the Radio connector.
+ * Set audio switch 2
  *
- * @param state true to enable power; otherwise false
+ * @param state true to turn on, false to turn off
  */
-void IOPorts::RadioPower (bool_t state)
+void IOPorts::AudioSW2(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_RADIO_PWR;
+        FIO1SET = IO_P1_AUDSW2;
     else
-        FIO1CLR = IO_P1_RADIO_PWR;
+        FIO1CLR = IO_P1_AUDSW2;
+}
+
+/**
+ * Set audio switch 3
+ *
+ * @param state true to turn on, false to turn off
+ */
+void IOPorts::AudioSW3(bool_t state)
+{
+    if (state)
+        FIO1SET = IO_P1_AUDSW3;
+    else
+        FIO1CLR = IO_P1_AUDSW3;
 }
 
 /**
@@ -138,16 +158,16 @@ void IOPorts::RadioPTT (bool_t state)
 }
 
 /**
- * Set the state of the radio frequency selection terminal 5 on the Radio connector.
+ * Set the state of the radio frequency selection on the Radio connector.
  *
  * @param state true to pull LOW; otherwise false
  */
 void IOPorts::RadioFreq (bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_RADIO_FREQ;
+        FIO1SET = IO_P1_FREQCHG;
     else
-        FIO1CLR = IO_P1_RADIO_FREQ;
+        FIO1CLR = IO_P1_FREQCHG;
 }
 
 /**
@@ -192,17 +212,10 @@ void IOPorts::StatusLED (STATUS_LED led, bool_t state)
     }
 }
 
-/**
- * Set the state of test point 2.
- *
- * @param state true to set HIGH; otherwise false
- */
-void IOPorts::TestPoint2 (bool_t state)
+bool_t IOPorts::GetCarrierDet()
 {
-    if (state)
-        FIO0SET = IO_P0_TEST_POINT_2;
-    else
-        FIO0CLR = IO_P0_TEST_POINT_2;
+    return (FIO0PIN & IO_P0_CARRIERDET) ? true : false;
 }
+
 
 

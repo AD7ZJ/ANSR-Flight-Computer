@@ -329,10 +329,6 @@ void FlightComputer::Run()
     this->afsk = AFSK::GetInstance();
     this->gps = GPSNmea::GetInstance();
 
-    // Turn on the radio and give it time to boot.
-    IOPorts::RadioPower(true);
-    SystemControl::Sleep(1000);
-
     // Show a startup message on the serial port.
     UART0::GetInstance()->WriteLine (">ANSR Flight Computer v0.3 booted!");
 

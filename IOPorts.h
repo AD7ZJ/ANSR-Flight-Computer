@@ -55,12 +55,13 @@ public:
     static void Enable();
     static void Port1(bool_t state);
     static void Port2(bool_t state);
-    static void Port3(bool_t state);
+    static void AudioSW1(bool_t state);
+    static void AudioSW2(bool_t state);
+    static void AudioSW3(bool_t state);
     static void RadioFreq (bool_t state);
-    static void RadioPower (bool_t state);
     static void RadioPTT (bool_t state);
     static void StatusLED (STATUS_LED led, bool_t state);
-    static void TestPoint2 (bool_t state);
+    static bool_t GetCarrierDet();
 };
 
 /** @} */

@@ -63,15 +63,15 @@ void Engineering::Enable()
 void Engineering::Menu()
 {
     uart->WriteLine ("ANSR Flight Computer Engineering Console");
-    //uart->WriteLine ("(S)tatus");
-    uart->WriteLine ("(1) Radio Power");
     uart->WriteLine ("(2) Radio PTT");
     uart->WriteLine ("(3) Radio Freq");
     uart->WriteLine ("Re(b)oot");
     uart->WriteLine ("Trans(m)it");
     uart->WriteLine ("(n) MIC-E Test");
     uart->WriteLine ("System build time and (d)ate");
-    //uart->WriteLine ("Cycle (d)ac output 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.3 VDC");
+    uart->WriteLine ("Read (t)emp sensor");
+    uart->WriteLine ("Generate test t(o)nes");
+    uart->WriteLine ("Request new landing (p)rediction");
     uart->WriteLine ("(h)elp");
     uart->WriteLine("");
 }
@@ -167,11 +167,6 @@ void Engineering::ProcessCommand()
         
         switch (value)
         {
-            case '1':
-                radioPower = (radioPower ? false : true);
-                IOPorts::RadioPower(radioPower);
-                break;
-                
             case '2':
                 radioPTT = (radioPTT ? false : true);
                 IOPorts::RadioPTT(radioPTT);
@@ -267,7 +262,7 @@ void Engineering::ProcessCommand()
                 break;
 
             case 'd':
-            	uart->WriteLine("Built: %s %s", __DATE__, __TIME__);
+            	uart->WriteLine("Built: %s %s Git: %s", __DATE__, __TIME__, __GIT_VERSION);
             	break;
 
             default:
