@@ -68,6 +68,21 @@ private:
     /// Flag that indicates the primary or secondary frequency are selected.
     bool_t radioFreq;
 
+    /// Flag that indicates the status of port1
+    bool_t port1;
+
+    /// Flag that indicates the status of port2
+    bool_t port2;
+
+    /// Flag that indicates the status of audio switch 1
+    bool_t audiosw1;
+
+    /// Flag that indicates the status of audio switch 2
+    bool_t audiosw2;
+
+    /// Flag that indicates the status of audio switch 3
+    bool_t audiosw3;
+
     void Menu();
 };
 

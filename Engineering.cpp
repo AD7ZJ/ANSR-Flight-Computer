@@ -63,8 +63,14 @@ void Engineering::Enable()
 void Engineering::Menu()
 {
     uart->WriteLine ("ANSR Flight Computer Engineering Console");
-    uart->WriteLine ("(2) Radio PTT");
-    uart->WriteLine ("(3) Radio Freq");
+    uart->WriteLine ("(1) Radio PTT");
+    uart->WriteLine ("(2) Radio Freq");
+    uart->WriteLine ("(3) Open drain out 1");
+    uart->WriteLine ("(4) Open drain out 2");
+    uart->WriteLine ("(5) Audio switch 1");
+    uart->WriteLine ("(6) Audio switch 2");
+    uart->WriteLine ("(7) Audio switch 3");
+    uart->WriteLine ("(8) Read carrier det status");
     uart->WriteLine ("Re(b)oot");
     uart->WriteLine ("Trans(m)it");
     uart->WriteLine ("(n) MIC-E Test");
@@ -167,16 +173,45 @@ void Engineering::ProcessCommand()
         
         switch (value)
         {
-            case '2':
+            case '1':
                 radioPTT = (radioPTT ? false : true);
                 IOPorts::RadioPTT(radioPTT);
                 break;
                 
-            case '3':
+            case '2':
                 radioFreq = (radioFreq ? false : true);
                 IOPorts::RadioFreq(radioFreq);
                 break;
                 
+            case '3':
+                port1 = (port1 ? false : true);
+                IOPorts::Port1(port1);
+                break;
+
+            case '4':
+                port2 = (port2 ? false : true);
+                IOPorts::Port2(port2);
+                break;
+
+            case '5':
+                audiosw1 = (audiosw1 ? false : true);
+                IOPorts::AudioSW1(audiosw1);
+                break;
+
+            case '6':
+                audiosw2 = (audiosw2 ? false : true);
+                IOPorts::AudioSW2(audiosw2);
+                break;
+
+            case '7':
+                audiosw3 = (audiosw3 ? false : true);
+                IOPorts::AudioSW3(audiosw3);
+                break;
+
+            case '8':
+                UART0::GetInstance()->WriteLine("Carrier Detect: %s", (IOPorts::GetCarrierDet()) ? "High" : "Low");
+                break;
+
             case 'b':
                 uart->WriteLine ("rebooting");
                 WatchDogTimer::Reset();

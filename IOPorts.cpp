@@ -69,9 +69,9 @@ void IOPorts::Enable()
 
     FIO0CLR = IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_OD_2;
 
-    // specify input pins on P0
-    FIO0DIR |= (IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_OD_2 );
     // specify output pins on P0
+    FIO0DIR |= (IO_P0_RADIO_PTT | IO_P0_LED_RED | IO_P0_LED_GREEN | IO_P0_OD_2 );
+    // specify input pins on P0
     FIO0DIR &= ~(IO_P0_CARRIERDET);
 
     FIO1CLR = IO_P1_AUDSW1 | IO_P1_AUDSW2 | IO_P1_AUDSW3 | IO_P1_OD_1 | IO_P1_FREQCHG;
@@ -100,9 +100,9 @@ void IOPorts::Port1(bool_t state)
 void IOPorts::Port2(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P0_OD_2;
+        FIO0SET = IO_P0_OD_2;
     else
-        FIO1CLR = IO_P0_OD_2;
+        FIO0CLR = IO_P0_OD_2;
 }
 
 /**
@@ -151,10 +151,11 @@ void IOPorts::AudioSW3(bool_t state)
  */
 void IOPorts::RadioPTT (bool_t state)
 {
+    //FIXME: we're using OD2 since the radio PTT discreet is not working on the prototype hardware
     if (state)
-        FIO0SET = IO_P0_RADIO_PTT;
+        FIO0SET = IO_P0_OD_2;
     else
-        FIO0CLR = IO_P0_RADIO_PTT;
+        FIO0CLR = IO_P0_OD_2;
 }
 
 /**

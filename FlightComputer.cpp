@@ -150,9 +150,7 @@ void FlightComputer::ScheduleMessage()
     char buffer[150];
     MICEncoder micEncoder;
 
-    IOPorts::RadioPTT(true);
     this->gps->Update();
-    IOPorts::RadioPTT(false);
 
     if (SystemControl::GetTick() > this->statusLEDOffTick)
         IOPorts::StatusLED(IOPorts::LEDGreen, false);
