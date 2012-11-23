@@ -351,6 +351,13 @@ void FlightComputer::Run()
         if (!this->afsk->IsTransmit())
             ScheduleMessage();
 
+        if(this->timer100msFlag) {
+            this->timer100msFlag = false;
+            // update the repeater controller
+            Repeater::GetInstance()->Update();
+        }
+
+
         // 1 second tasks
         if(this->timer1sFlag) {
             this->timer1sFlag = false;

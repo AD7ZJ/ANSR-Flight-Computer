@@ -59,6 +59,7 @@
 #include "SDLogger.h"
 #include "GPSNmea.h"
 #include "ToneGenerator.h"
+#include "Repeater.h"
 
 #include <string.h>
 #include <stdint.h>

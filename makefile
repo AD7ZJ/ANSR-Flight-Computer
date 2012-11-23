@@ -83,7 +83,8 @@ CSRC  = CRunTime.c
 CSRC += fatfs/ff.c fatfs/mmc.c
 
 # List CPP source files here
-CPPSRC = AFSK.cpp main.cpp Engineering.cpp FlightComputer.cpp IOPorts.cpp Log.cpp SDLogger.cpp GPSNmea.cpp ToneGenerator.cpp
+CPPSRC = AFSK.cpp main.cpp Engineering.cpp FlightComputer.cpp IOPorts.cpp Log.cpp SDLogger.cpp
+CPPSRC += GPSNmea.cpp ToneGenerator.cpp Repeater.cpp
 
 # List ASM source files here
 ASRC = crt.s

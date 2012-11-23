@@ -113,9 +113,9 @@ void IOPorts::Port2(bool_t state)
 void IOPorts::AudioSW1(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_AUDSW1;
-    else
         FIO1CLR = IO_P1_AUDSW1;
+    else
+        FIO1SET = IO_P1_AUDSW1;
 }
 
 /**
@@ -126,9 +126,9 @@ void IOPorts::AudioSW1(bool_t state)
 void IOPorts::AudioSW2(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_AUDSW2;
-    else
         FIO1CLR = IO_P1_AUDSW2;
+    else
+        FIO1SET = IO_P1_AUDSW2;
 }
 
 /**
@@ -139,9 +139,9 @@ void IOPorts::AudioSW2(bool_t state)
 void IOPorts::AudioSW3(bool_t state)
 {
     if (state)
-        FIO1SET = IO_P1_AUDSW3;
-    else
         FIO1CLR = IO_P1_AUDSW3;
+    else
+        FIO1SET = IO_P1_AUDSW3;
 }
 
 /**

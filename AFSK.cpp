@@ -107,6 +107,7 @@ void AFSK::Update()
         //FIXME
         //IOPorts::RadioPTT(false);
         IOPorts::StatusLED (IOPorts::LEDRed, false);
+        Repeater::GetInstance()->AudioControl(Repeater::NONE);
 
         this->txFlag = false;
 
