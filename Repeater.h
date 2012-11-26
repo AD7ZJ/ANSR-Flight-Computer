@@ -55,18 +55,32 @@ public:
         NONE
     } AUDIO_CONTROL;
 
+    /// CW tone duration in tenths of a second
+    typedef enum {
+        DOT = 1,
+        DASH = 2
+    } CW_TONE_DUR;
+
     Repeater();
     static Repeater * GetInstance();
     void Update();
     void DebounceCarrierDet();
     void AudioControl(AUDIO_CONTROL input);
-
+    void SendID();
 
 private:
     void SendCwID();
     void CourteseyBeep();
+    void CWDash();
+    void CWDot();
+
+    uint16_t CW_FREQ;
+    uint16_t CW_INTER_SYMBOL_TIME;
+    uint16_t CW_INTER_CHAR_TIME;
 
     bool_t debouncedCD;
+
+    uint32_t repeaterIDtick;
 };
 
 /** @} */

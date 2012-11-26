@@ -287,9 +287,9 @@ void Engineering::ProcessCommand()
 
             case 'o':
                 uart->WriteLine("Generating Tones...");
-                FlightComputer::GetInstance()->testTone.SingleTone(300, 1);
-                FlightComputer::GetInstance()->testTone.SingleTone(600, 2);
-                FlightComputer::GetInstance()->testTone.SingleTone(1200, 3);
+                ToneGenerator::GetInstance()->SingleTone(300, 1);
+                ToneGenerator::GetInstance()->SingleTone(600, 2);
+                ToneGenerator::GetInstance()->SingleTone(1200, 3);
                 break;
 
             case 'p':

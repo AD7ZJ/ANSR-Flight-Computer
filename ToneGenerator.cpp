@@ -26,6 +26,9 @@
 
 #include "main.h"
 
+/// Reserve memory for singleton object.
+static ToneGenerator toneGeneratorSingletonObject;
+
  const uint16_t  ToneGenerator::sineTable[] = {
             0x2C3, 0x369, 0x3D8, 0x3FF,
             0x3D8, 0x369, 0x2C3, 0x200,
@@ -42,6 +45,13 @@
      Timer0::GetInstance()->SetPeriod(63);
  }
 
+ /**
+  *  Get a pointer to the repeater control object.
+  */
+ ToneGenerator * ToneGenerator::GetInstance()
+ {
+     return  &toneGeneratorSingletonObject;
+ }
 
  /**
   * Generate a single-frequency tone for the specified duration

@@ -47,8 +47,6 @@ public:
     void Run();
 
     static FlightComputer *GetInstance();
-    
-    ToneGenerator testTone;
 
     /// variables used to count the elapsed time
     volatile uint16_t msElapsed;

@@ -29,6 +29,9 @@
 /// Reserve memory for singleton object.
 static Repeater repeaterSingletonObject;
 
+/// How often in milliseconds the repeater should ID
+const uint32_t repeaterIDPeriod = (10 * 60 * 1000);
+
 /**
  *  Get a pointer to the repeater control object.
  */
@@ -41,7 +44,11 @@ Repeater * Repeater::GetInstance()
  * Constructor
  */
  Repeater::Repeater() {
-     debouncedCD = false;
+     this->debouncedCD = false;
+     this->repeaterIDtick = SystemControl::GetInstance()->GetTick() + repeaterIDPeriod;
+     this->CW_INTER_SYMBOL_TIME = 10;
+     this->CW_INTER_CHAR_TIME = 200;
+     this->CW_FREQ = 1000;
  }
 
  void Repeater::AudioControl(AUDIO_CONTROL input) {
@@ -74,9 +81,9 @@ Repeater * Repeater::GetInstance()
 
  /**
   * Called every 100 ms to update the repeater's status
-  *
   */
  void Repeater::Update() {
+     // Check to see if the repeater is keyed up
      if(!IOPorts::GetCarrierDet()) {
          // Setup the audio routing
          AudioControl(this->UPLINK_RADIO);
@@ -85,14 +92,94 @@ Repeater * Repeater::GetInstance()
          IOPorts::RadioPTT(true);
      }
      else {
-         IOPorts::RadioPTT(false);
-         AudioControl(this->NONE);
-     }
+         // Check to see if we need to ID
+        if(SystemControl::GetInstance()->GetTick() > repeaterIDtick) {
+            this->repeaterIDtick = SystemControl::GetInstance()->GetTick() + repeaterIDPeriod;
+            SendID();
+        }
 
+        IOPorts::RadioPTT(false);
+        AudioControl(this->NONE);
+     }
+ }
+
+ /*
+  * Send the CW ID
+  */
+ void Repeater::SendID() {
+     // Setup the audio routing
+     AudioControl(this->CPU_AUDIO);
+
+     // Key up the downlink radio
+     IOPorts::RadioPTT(true);
+
+     // K
+     this->CWDash();
+     this->CWDot();
+     this->CWDash();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // A
+     this->CWDot();
+     this->CWDash();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // 7
+     this->CWDash();
+     this->CWDash();
+     this->CWDot();
+     this->CWDot();
+     this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // N
+     this->CWDash();
+     this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // S
+     this->CWDot();
+     this->CWDot();
+     this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // R
+     this->CWDot();
+     this->CWDash();
+     this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // /
+     this->CWDash();
+     this->CWDot();
+     this->CWDot();
+     this->CWDash();
+     this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
+
+     // R
+     this->CWDot();
+     this->CWDash();
+     this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
  }
 
  void Repeater::DebounceCarrierDet() {
 
-
  }
 
+/**
+ * Generates a single CW 'dot'
+ */
+void Repeater::CWDot() {
+    ToneGenerator::GetInstance()->SingleTone(CW_FREQ, this->DOT);
+    SystemControl::GetInstance()->Sleep(this->CW_INTER_SYMBOL_TIME);
+}
+
+/**
+ * Generates a single CW 'dash'
+ */
+void Repeater::CWDash() {
+    ToneGenerator::GetInstance()->SingleTone(CW_FREQ, this->DASH);
+    SystemControl::GetInstance()->Sleep(this->CW_INTER_SYMBOL_TIME);
+}

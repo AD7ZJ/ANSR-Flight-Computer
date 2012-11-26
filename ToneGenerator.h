@@ -42,6 +42,7 @@ class ToneGenerator
 public:
     ToneGenerator();
     void SingleTone(uint16_t freq, uint8_t duration);
+    static ToneGenerator * GetInstance();
 
 private:
     static const uint16_t sineTable[16];
