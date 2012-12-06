@@ -41,7 +41,7 @@ class ToneGenerator
 
 public:
     ToneGenerator();
-    void SingleTone(uint16_t freq, uint8_t duration);
+    void SingleTone(uint16_t freq, uint16_t duration);
     static ToneGenerator * GetInstance();
 
 private:

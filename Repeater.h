@@ -55,10 +55,10 @@ public:
         NONE
     } AUDIO_CONTROL;
 
-    /// CW tone duration in tenths of a second
+    /// CW tone duration in tenths of a second 65, 195
     typedef enum {
-        DOT = 1,
-        DASH = 2
+        DOT = 43,
+        DASH = 130
     } CW_TONE_DUR;
 
     Repeater();
@@ -67,16 +67,17 @@ public:
     void DebounceCarrierDet();
     void AudioControl(AUDIO_CONTROL input);
     void SendID();
+    void CourteseyBeep();
 
 private:
     void SendCwID();
-    void CourteseyBeep();
     void CWDash();
     void CWDot();
 
     uint16_t CW_FREQ;
     uint16_t CW_INTER_SYMBOL_TIME;
     uint16_t CW_INTER_CHAR_TIME;
+    bool_t repeaterIsTransmitting;
 
     bool_t debouncedCD;
 

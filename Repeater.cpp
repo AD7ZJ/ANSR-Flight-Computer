@@ -45,10 +45,11 @@ Repeater * Repeater::GetInstance()
  */
  Repeater::Repeater() {
      this->debouncedCD = false;
+     this->repeaterIsTransmitting = false;
      this->repeaterIDtick = SystemControl::GetInstance()->GetTick() + repeaterIDPeriod;
-     this->CW_INTER_SYMBOL_TIME = 10;
-     this->CW_INTER_CHAR_TIME = 200;
-     this->CW_FREQ = 1000;
+     this->CW_INTER_SYMBOL_TIME = 56; //85;
+     this->CW_INTER_CHAR_TIME = 168; //255;
+     this->CW_FREQ = 1200;
  }
 
  void Repeater::AudioControl(AUDIO_CONTROL input) {
@@ -90,6 +91,7 @@ Repeater * Repeater::GetInstance()
 
          // key up the downlink radio
          IOPorts::RadioPTT(true);
+         repeaterIsTransmitting = true;
      }
      else {
          // Check to see if we need to ID
@@ -97,9 +99,13 @@ Repeater * Repeater::GetInstance()
             this->repeaterIDtick = SystemControl::GetInstance()->GetTick() + repeaterIDPeriod;
             SendID();
         }
+        if(repeaterIsTransmitting) {
+            this->CourteseyBeep();
 
-        IOPorts::RadioPTT(false);
-        AudioControl(this->NONE);
+            IOPorts::RadioPTT(false);
+            AudioControl(this->NONE);
+            repeaterIsTransmitting = false;
+        }
      }
  }
 
@@ -161,6 +167,19 @@ Repeater * Repeater::GetInstance()
      this->CWDot();
      this->CWDash();
      this->CWDot();
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME * 2);
+
+     this->CourteseyBeep();
+
+     IOPorts::RadioPTT(false);
+ }
+
+ void Repeater::CourteseyBeep() {
+     // Setup the audio routing
+     AudioControl(this->CPU_AUDIO);
+     ToneGenerator::GetInstance()->SingleTone(330, 100);
+     ToneGenerator::GetInstance()->SingleTone(495, 100);
+     ToneGenerator::GetInstance()->SingleTone(660, 100);
      SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
  }
 

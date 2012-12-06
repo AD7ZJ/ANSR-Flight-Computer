@@ -78,6 +78,7 @@ void Engineering::Menu()
     uart->WriteLine ("Read (t)emp sensor");
     uart->WriteLine ("Generate test t(o)nes");
     uart->WriteLine ("Request new landing (p)rediction");
+    uart->WriteLine ("Send repeater (i)d");
     uart->WriteLine ("(h)elp");
     uart->WriteLine("");
 }
@@ -253,7 +254,11 @@ void Engineering::ProcessCommand()
                 
             case 'u':
                 Log::GetInstance()->Dump();
-                break;    
+                break;
+
+            case 'i':
+                Repeater::GetInstance()->SendID();
+                break;
                 
             case 'e':
                 uart->Write ("Are you sure you want to erase the flash memory (yes)? ");

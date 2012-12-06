@@ -57,12 +57,12 @@ static ToneGenerator toneGeneratorSingletonObject;
   * Generate a single-frequency tone for the specified duration
   *
   * @param freq Frequency in Hz
-  * @param duration Duration in tenths of a second
+  * @param duration Duration in milliseconds
   */
- void ToneGenerator::SingleTone(uint16_t freq, uint8_t duration) {
+ void ToneGenerator::SingleTone(uint16_t freq, uint16_t duration) {
      // figure out the timer period
      uint32_t periodus = 1000000 / (freq * 16);
-     uint32_t durationus = duration * 100000;
+     uint32_t durationus = duration * 1000;
      uint32_t accumDur = 0;
      Timer0::GetInstance()->SetPeriod(periodus);
 
