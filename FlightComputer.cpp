@@ -150,6 +150,7 @@ void FlightComputer::ScheduleMessage()
     char buffer[150];
     MICEncoder micEncoder;
 
+    // Check for new characters from the GPS engine
     this->gps->Update();
 
     if (SystemControl::GetTick() > this->statusLEDOffTick)

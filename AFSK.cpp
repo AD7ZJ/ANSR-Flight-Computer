@@ -49,12 +49,13 @@ AFSK::AFSK()
 
     this->txFlag = false;
     this->txDoneFlag = false;
+    this->txDataQueued = false;
 
     // Set the preamble time to 200mS.
     ax25.SetPreambleCount (30);
 
     // Set the source, destination, and DIGI paths.
-    ax25.SetSourceAddress ("KD7LMO", 11);
+    ax25.SetSourceAddress ("KA7NSR", 14);
     ax25.SetDestAddress ("APRS", 0);
     ax25.SetDigiPath ("GATE", 0, "WIDE2", 2);
 }
@@ -79,13 +80,22 @@ void AFSK::Transmit (const char *text, const char *destAddress)
     // Generate the AX.25 stream.
     ax25.GenerateMessage (text);
 
+    // we only queue one message
+    this->txDataQueued = false;
+
     // Set a pointer to the first byte in the message.
     this->messageIndex = 0;
 
-    IOPorts::StatusLED (IOPorts::LEDRed, true);
-    IOPorts::RadioPTT(true);
+    // Wait to send the data if the repeater is currently keyed up
+    if(Repeater::GetInstance()->IsTransmit()) {
+        this->txDataQueued = true;
+        return;
+    }
 
     this->txFlag = true;
+    IOPorts::StatusLED (IOPorts::LEDRed, true);
+    Repeater::GetInstance()->AudioControl(Repeater::PACKET_AUDIO);
+    IOPorts::RadioPTT(true);
 }
 
 /**
@@ -94,8 +104,18 @@ void AFSK::Transmit (const char *text, const char *destAddress)
 void AFSK::Update()
 {
     // Quit if we don't have any data to transmit.
-    if (!this->txFlag)
+    if ((!this->txFlag && !this->txDataQueued) || Repeater::GetInstance()->IsTransmit())
         return;
+
+    // send a queued packet if there is one.
+    if(this->txDataQueued) {
+        IOPorts::StatusLED (IOPorts::LEDRed, true);
+        Repeater::GetInstance()->AudioControl(Repeater::PACKET_AUDIO);
+        IOPorts::RadioPTT(true);
+
+        this->txFlag = true;
+        this->txDataQueued = false;
+    }
 
     // Determine if the MODEM is ready for another byte.
     if (!this->modem->IsTxDataReady())
@@ -104,8 +124,7 @@ void AFSK::Update()
     // If we are the end of the message, shut down the radio.
     if (this->messageIndex == ax25.Length())
     {
-        //FIXME
-        //IOPorts::RadioPTT(false);
+        IOPorts::RadioPTT(false);
         IOPorts::StatusLED (IOPorts::LEDRed, false);
         Repeater::GetInstance()->AudioControl(Repeater::NONE);
 

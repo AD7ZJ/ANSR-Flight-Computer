@@ -32,6 +32,9 @@ static Repeater repeaterSingletonObject;
 /// How often in milliseconds the repeater should ID
 const uint32_t repeaterIDPeriod = (10 * 60 * 1000);
 
+/// Transmit duration in ms
+const uint32_t maxTxDuration = (3 * 60 * 1000);
+
 /**
  *  Get a pointer to the repeater control object.
  */
@@ -46,12 +49,27 @@ Repeater * Repeater::GetInstance()
  Repeater::Repeater() {
      this->debouncedCD = false;
      this->repeaterIsTransmitting = false;
-     this->repeaterIDtick = SystemControl::GetInstance()->GetTick() + repeaterIDPeriod;
+     this->repeaterIDtick = repeaterIDPeriod;
      this->CW_INTER_SYMBOL_TIME = 56; //85;
      this->CW_INTER_CHAR_TIME = 168; //255;
      this->CW_FREQ = 1200;
  }
 
+ /**
+  * Indicates whether the repeater is currently keyed up or not
+  *
+  * @return True indicates currently transmitting
+  */
+ bool_t Repeater::IsTransmit() {
+     return this->repeaterIsTransmitting;
+ }
+
+ /**
+  * Method to switch the audio gates
+  *
+  * @param input Enumated type indicating which audio source should be connected
+  *              to the downlink radio
+  */
  void Repeater::AudioControl(AUDIO_CONTROL input) {
      switch (input) {
          case CPU_AUDIO:
@@ -84,8 +102,10 @@ Repeater * Repeater::GetInstance()
   * Called every 100 ms to update the repeater's status
   */
  void Repeater::Update() {
+     bool_t txTimedOut = (SystemControl::GetInstance()->GetTick() > txTimeoutTick) ? true : false;
+
      // Check to see if the repeater is keyed up
-     if(!IOPorts::GetCarrierDet()) {
+     if(!IOPorts::GetCarrierDet() && !txTimedOut && !AFSK::GetInstance()->IsTransmit()) {
          // Setup the audio routing
          AudioControl(this->UPLINK_RADIO);
 
@@ -106,11 +126,15 @@ Repeater * Repeater::GetInstance()
             AudioControl(this->NONE);
             repeaterIsTransmitting = false;
         }
+
+        if(IOPorts::GetCarrierDet())
+            // update the TX timeout tick if the uplink radio is squelched
+            txTimeoutTick = SystemControl::GetInstance()->GetTick() + maxTxDuration;
      }
  }
 
  /*
-  * Send the CW ID
+  * Send the repeater's CW ID
   */
  void Repeater::SendID() {
      // Setup the audio routing
@@ -167,15 +191,19 @@ Repeater * Repeater::GetInstance()
      this->CWDot();
      this->CWDash();
      this->CWDot();
-     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME * 2);
+     SystemControl::GetInstance()->Sleep(CW_INTER_CHAR_TIME);
 
      this->CourteseyBeep();
 
      IOPorts::RadioPTT(false);
  }
 
+ /**
+  * Geneate the repeater's courtesey beep
+  */
  void Repeater::CourteseyBeep() {
      // Setup the audio routing
+     SystemControl::GetInstance()->Sleep(700);
      AudioControl(this->CPU_AUDIO);
      ToneGenerator::GetInstance()->SingleTone(330, 100);
      ToneGenerator::GetInstance()->SingleTone(495, 100);

@@ -68,6 +68,7 @@ public:
     void AudioControl(AUDIO_CONTROL input);
     void SendID();
     void CourteseyBeep();
+    bool_t IsTransmit();
 
 private:
     void SendCwID();
@@ -82,6 +83,7 @@ private:
     bool_t debouncedCD;
 
     uint32_t repeaterIDtick;
+    uint32_t txTimeoutTick;
 };
 
 /** @} */

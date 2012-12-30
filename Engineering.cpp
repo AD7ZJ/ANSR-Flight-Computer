@@ -228,7 +228,6 @@ void Engineering::ProcessCommand()
                 
                 NMEA::GPGGA (this->gps->Data(), buffer);
                 uart->WriteLine (buffer);                
-                Repeater::GetInstance()->AudioControl(Repeater::PACKET_AUDIO);
                 AFSK::GetInstance()->Transmit(buffer);
                 break;                
                 

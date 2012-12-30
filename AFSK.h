@@ -62,6 +62,9 @@ class AFSK
 
         /// Flag that indicates all the data has been sent.
         bool_t txDoneFlag;
+
+        /// Flag that indicates there is an AX25 stream waiting to be sent
+        bool_t txDataQueued;
 };
 
 /** @} */
