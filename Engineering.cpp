@@ -77,7 +77,7 @@ void Engineering::Menu()
     uart->WriteLine ("System build time and (d)ate");
     uart->WriteLine ("Read (t)emp sensor");
     uart->WriteLine ("Generate test t(o)nes");
-    uart->WriteLine ("Request new landing (p)rediction");
+    uart->WriteLine ("Start GPS (p)assthru. Reboot to exit");
     uart->WriteLine ("Send repeater (i)d");
     uart->WriteLine ("(h)elp");
     uart->WriteLine("");
@@ -297,7 +297,8 @@ void Engineering::ProcessCommand()
                 break;
 
             case 'p':
-                FlightComputer::GetInstance()->LandingPrediction();
+                uart->Write ("GPS Passthru mode now in effect. Reboot to exit\r\n");
+                FlightComputer::GetInstance()->passThruMode = true;
                 break;
 
             case 'd':

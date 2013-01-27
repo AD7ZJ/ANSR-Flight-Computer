@@ -62,7 +62,11 @@ public:
     /// flag indicating 10s is up
     volatile bool_t timer10sFlag;
 
+    /// flag indicating launch has been detected
     bool_t launchDetect;
+
+    /// flag indicating GPS passthru mode is enabled
+    bool_t passThruMode;
 
     /// GPDData object indicating the predicted landing position
     GPSData landingPrediction;

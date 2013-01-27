@@ -97,6 +97,7 @@ FlightComputer::FlightComputer()
     this->msElapsed = 0;
     this->sElapsed = 0;
     this->launchDetect = false;
+    this->passThruMode = false;
 }
 
 /**
@@ -201,27 +202,28 @@ void FlightComputer::ScheduleMessage()
 
         if (gpsData->fixType == GPSData::NoFix)
             this->statusLEDOffTick = SystemControl::GetTick() + 800;
-        else
+        else {
             this->statusLEDOffTick = SystemControl::GetTick() + 100;
 
-        switch (gpsData->seconds)
-        {
-            case 15:
-                StatusPacket (this->gps->Data(), buffer);
-                this->afsk->Transmit (buffer);
-                break;
+            switch (gpsData->seconds)
+            {
+                case 15:
+                    StatusPacket (this->gps->Data(), buffer);
+                    this->afsk->Transmit (buffer);
+                    break;
 
-            case 25:
-                // transmit a landing prediction packet
-                this->LandingPrediction();
-                break;
-            case 0:
-            case 30:
-                // transmit current location
-                micEncoder.Encode (this->gps->Data());
-                this->afsk->Transmit (micEncoder.GetInformationField(), micEncoder.GetDestAddress());
-                break;
-        } // END switch
+                case 25:
+                    // transmit a landing prediction packet
+                    this->LandingPrediction();
+                    break;
+                case 0:
+                case 30:
+                    // transmit current location
+                    micEncoder.Encode (this->gps->Data());
+                    this->afsk->Transmit (micEncoder.GetInformationField(), micEncoder.GetDestAddress());
+                    break;
+            } // END switch
+        }
 
         // Engineering data set reported
         sprintf (buffer, "%s Time:%02d:%02d:%02d %d/%d/%d\r\n", (gpsData->fixType == GPSData::NoFix ? "no fix" : (gpsData->fixType == GPSData::Fix2D ? "2D fix" : "3D fix")), gpsData->hours, gpsData->minutes, gpsData->seconds, gpsData->month, gpsData->day, gpsData->year);
@@ -296,7 +298,7 @@ void FlightComputer::Run()
 
     // UART 0 is the console serial port, UART 1 is the GPS engine.
     UART0::GetInstance()->Enable(UART0::BaudRate57600);
-    UART1::GetInstance()->Enable(UART1::BaudRate9600, UART1::Control8N1);
+    UART1::GetInstance()->Enable(UART1::BaudRate4800, UART1::Control8N1);
 
     // SPI 0 is the CMX867A MODEM.  SPI 1 is the SD card which is setup by the SDlogger class
     SPI0::GetInstance()->Enable();
@@ -343,43 +345,48 @@ void FlightComputer::Run()
 
     for (;;)
     {
-        // Check the serial port for engineering commands.
-        eng->ProcessCommand();
-
-        // Update the waveform state machine as required.
-        this->afsk->Update();
-
-        if (!this->afsk->IsTransmit())
-            ScheduleMessage();
-
-        if(this->timer100msFlag) {
-            this->timer100msFlag = false;
-            // update the repeater controller
-            Repeater::GetInstance()->Update();
+        // forward packets to the UART from the GPS if in passthru mode
+        if(passThruMode) {
+            GPSNmea::GetInstance()->GpsPassthru();
         }
+        else {
+            // Check the serial port for engineering commands.
+            eng->ProcessCommand();
+
+            // Update the waveform state machine as required.
+            this->afsk->Update();
+
+            if (!this->afsk->IsTransmit())
+                ScheduleMessage();
+
+            if(this->timer100msFlag) {
+                this->timer100msFlag = false;
+                // update the repeater controller
+                Repeater::GetInstance()->Update();
+            }
 
 
-        // 1 second tasks
-        if(this->timer1sFlag) {
-            this->timer1sFlag = false;
+            // 1 second tasks
+            if(this->timer1sFlag) {
+                this->timer1sFlag = false;
 
-            tempF = LM92::GetInstance()->ReadTempF();
-            // write the temperature out to the SD card
-            numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
+                tempF = LM92::GetInstance()->ReadTempF();
+                // write the temperature out to the SD card
+                numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
 
-            //UART0::GetInstance()->WriteLine(tempBuffer);
+                //UART0::GetInstance()->WriteLine(tempBuffer);
+            }
+
+            // 10 second tasks
+            if(this->timer10sFlag) {
+                this->timer10sFlag = false;
+                // log the current GPS fix
+                Log::GetInstance()->GPSFix(gps->Data());
+                IOPorts::StatusLED(IOPorts::LEDRed, true);
+                Log::GetInstance()->Flush();
+                IOPorts::StatusLED(IOPorts::LEDRed, false);
+            }
         }
-
-        // 10 second tasks
-        if(this->timer10sFlag) {
-            this->timer10sFlag = false;
-            // log the current GPS fix
-            Log::GetInstance()->GPSFix(gps->Data());
-            IOPorts::StatusLED(IOPorts::LEDRed, true);
-            Log::GetInstance()->Flush();
-            IOPorts::StatusLED(IOPorts::LEDRed, false);
-        }
-
     } // END for(;;)
 }
 

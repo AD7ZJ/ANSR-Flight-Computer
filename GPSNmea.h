@@ -69,6 +69,14 @@ public:
      */
     virtual void WriteData(uint8_t data);
 
+    /**
+     *   Passes any characters from the GPS to the serial port and vice versa
+     */
+    void GpsPassthru();
+
+    /**
+     *   Get a pointer to the GPSNmea singleton
+     */
   	static GPSNmea *GetInstance();
 
 

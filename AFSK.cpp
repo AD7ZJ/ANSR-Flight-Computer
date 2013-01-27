@@ -95,6 +95,8 @@ void AFSK::Transmit (const char *text, const char *destAddress)
     this->txFlag = true;
     IOPorts::StatusLED (IOPorts::LEDRed, true);
     Repeater::GetInstance()->AudioControl(Repeater::PACKET_AUDIO);
+    IOPorts::RadioFreq(true);  // select channel 2 in the maxon module
+    SystemControl::GetInstance()->Sleep(150); // wait for the radio to tune the frequency
     IOPorts::RadioPTT(true);
 }
 
@@ -128,6 +130,8 @@ void AFSK::Update()
         IOPorts::StatusLED (IOPorts::LEDRed, false);
         Repeater::GetInstance()->AudioControl(Repeater::NONE);
 
+        IOPorts::RadioFreq(false);  // select channel 1 in the maxon module
+        SystemControl::GetInstance()->Sleep(50); // wait for the radio to tune the frequency
         this->txFlag = false;
 
         return;

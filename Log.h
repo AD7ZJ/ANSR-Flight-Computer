@@ -29,7 +29,7 @@
 
 #include "SDLogger.h"
 /**
- *  @defgroup application APRS Beacon Application
+ *  @defgroup application Flight Computer Application
  *
  *  @{
  */

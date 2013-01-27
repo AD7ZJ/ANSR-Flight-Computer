@@ -72,6 +72,24 @@ bool_t GPSNmea::IsDataReady() {
     return false;
 }
 
+void GPSNmea::GpsPassthru() {
+    uint8_t value;
+
+    while (UART1::GetInstance()->IsCharReady() || UART0::GetInstance()->IsCharReady()) {
+        // forward data from the GPS to the exteranl UART
+        if(UART1::GetInstance()->IsCharReady()) {
+            value = UART1::GetInstance()->ReadChar();
+            UART0::GetInstance()->WriteChar(value);
+        }
+
+        if(UART0::GetInstance()->IsCharReady()) {
+            // forward data from the external UART to the GPS
+            value = UART0::GetInstance()->ReadChar();
+            UART1::GetInstance()->WriteChar(value);
+        }
+    }
+}
+
 /**
  *   Read the serial FIFO and process complete GPS messages.
  */
