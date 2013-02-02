@@ -135,11 +135,16 @@ void FlightComputer::StatusPacket(const GPSData *gps, char *text)
 }
 
 void FlightComputer::LandingPrediction() {
-    char buffer[120];
+    MICEncoder micEncoder;
     if(Log::GetInstance()->burstDetect) {
         Log::GetInstance()->PredictLanding(&landingPrediction);
-        NMEA::GPGGA(&landingPrediction, buffer);
-        UART0::GetInstance()->WriteLine(buffer);
+        //NMEA::GPGGA(&landingPrediction, buffer);
+        //UART0::GetInstance()->WriteLine(buffer);
+        // transmit the predictions on a different SSID
+        this->afsk->PredictPacketSrc();
+        micEncoder.Encode (&landingPrediction);
+        this->afsk->Transmit (micEncoder.GetInformationField(), micEncoder.GetDestAddress());
+        this->afsk->NormalPacketSrc();
     }
 }
 
@@ -359,6 +364,7 @@ void FlightComputer::Run()
             if (!this->afsk->IsTransmit())
                 ScheduleMessage();
 
+            // 100 ms tasks
             if(this->timer100msFlag) {
                 this->timer100msFlag = false;
                 // update the repeater controller
@@ -369,16 +375,10 @@ void FlightComputer::Run()
             // 1 second tasks
             if(this->timer1sFlag) {
                 this->timer1sFlag = false;
-
-                tempF = LM92::GetInstance()->ReadTempF();
-                // write the temperature out to the SD card
-                numChars = sprintf(tempBuffer, "%0.2f degrees F. %d:%d:%d %ul", (float)tempF / 10, (int)time->hours, (int)time->minutes, (int)time->seconds, SystemControl::GetInstance()->CStackSize());
-
-                //UART0::GetInstance()->WriteLine(tempBuffer);
             }
 
             // 10 second tasks
-            if(this->timer10sFlag) {
+            if(this->timer10sFlag && !this->afsk->IsTransmit()) {
                 this->timer10sFlag = false;
                 // log the current GPS fix
                 Log::GetInstance()->GPSFix(gps->Data());

@@ -115,7 +115,7 @@ Repeater * Repeater::GetInstance()
      }
      else {
          // Check to see if we need to ID
-        if(SystemControl::GetInstance()->GetTick() > repeaterIDtick) {
+        if(SystemControl::GetInstance()->GetTick() > repeaterIDtick && !AFSK::GetInstance()->IsTransmit()) {
             this->repeaterIDtick = SystemControl::GetInstance()->GetTick() + repeaterIDPeriod;
             SendID();
         }

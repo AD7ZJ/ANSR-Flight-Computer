@@ -45,6 +45,9 @@ class AFSK
         void Transmit (const char *text, const char *destAddress = NULL);
         void Update();
         
+        void NormalPacketSrc();
+        void PredictPacketSrc();
+
         static AFSK *GetInstance();
         
     private:

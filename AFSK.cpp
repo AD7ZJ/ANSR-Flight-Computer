@@ -60,6 +60,19 @@ AFSK::AFSK()
     ax25.SetDigiPath ("GATE", 0, "WIDE2", 2);
 }
 
+/**
+ * Switches the source address to the SSID used for normal packets
+ */
+void AFSK::NormalPacketSrc() {
+    ax25.SetSourceAddress("KA7NSR", 14);
+}
+
+/**
+ * Switches the sourcd address to the SSID used for prediction packets
+ */
+void AFSK::PredictPacketSrc() {
+    ax25.SetSourceAddress("KA7NSR", 0);
+}
 
 /**
  * Generate and transmit a text string with AX.25 encoding and A-FSK modulation.
@@ -112,6 +125,8 @@ void AFSK::Update()
     // send a queued packet if there is one.
     if(this->txDataQueued) {
         IOPorts::StatusLED (IOPorts::LEDRed, true);
+        IOPorts::RadioFreq(true);  // select channel 2 in the maxon module
+        SystemControl::GetInstance()->Sleep(150); // wait for the radio to tune the frequency
         Repeater::GetInstance()->AudioControl(Repeater::PACKET_AUDIO);
         IOPorts::RadioPTT(true);
 
