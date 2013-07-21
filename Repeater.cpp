@@ -203,8 +203,8 @@ Repeater * Repeater::GetInstance()
   */
  void Repeater::CourteseyBeep() {
      // Setup the audio routing
-     SystemControl::GetInstance()->Sleep(700);
      AudioControl(this->CPU_AUDIO);
+     SystemControl::GetInstance()->Sleep(700);
      ToneGenerator::GetInstance()->SingleTone(330, 100);
      ToneGenerator::GetInstance()->SingleTone(495, 100);
      ToneGenerator::GetInstance()->SingleTone(660, 100);

@@ -212,17 +212,17 @@ void FlightComputer::ScheduleMessage()
 
             switch (gpsData->seconds)
             {
-                case 15:
+                case 10:
                     StatusPacket (this->gps->Data(), buffer);
                     this->afsk->Transmit (buffer);
                     break;
 
-                case 25:
+                case 20:
                     // transmit a landing prediction packet
                     this->LandingPrediction();
                     break;
-                case 0:
-                case 30:
+                case 15:
+                case 45:
                     // transmit current location
                     micEncoder.Encode (this->gps->Data());
                     this->afsk->Transmit (micEncoder.GetInformationField(), micEncoder.GetDestAddress());
@@ -285,10 +285,6 @@ void FlightComputer::SystemTimerTick()
  */
 void FlightComputer::Run()
 {
-	int32_t tempF;
-	char tempBuffer[40];
-	UINT numChars;
-
     // Set the system clock to the minimum speed required for USB operation.
     SystemControl::GetInstance()->Enable(SystemControl::Clock24MHz, SystemControl::Timer1Base);
 
@@ -346,8 +342,6 @@ void FlightComputer::Run()
 
     Log::GetInstance()->SystemBooted();
 
-    RTCTime * time = RTC::GetInstance()->Get();
-
     for (;;)
     {
         // forward packets to the UART from the GPS if in passthru mode
@@ -382,6 +376,10 @@ void FlightComputer::Run()
                 this->timer10sFlag = false;
                 // log the current GPS fix
                 Log::GetInstance()->GPSFix(gps->Data());
+
+                // log the current temperature
+                Log::GetInstance()->CurrentTemp();
+
                 IOPorts::StatusLED(IOPorts::LEDRed, true);
                 Log::GetInstance()->Flush();
                 IOPorts::StatusLED(IOPorts::LEDRed, false);

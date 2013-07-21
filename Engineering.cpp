@@ -285,7 +285,7 @@ void Engineering::ProcessCommand()
                 break;                
 
             case 't':
-                sprintf (buffer, "%ld", LM92::GetInstance()->ReadTempF());
+                sprintf (buffer, "%0.1f", (float)LM92::GetInstance()->ReadTempF() / 10);
                 uart->WriteLine (buffer);                
                 break;
 

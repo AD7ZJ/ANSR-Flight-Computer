@@ -52,6 +52,7 @@ public:
     void Flush();
     void LaunchDetected();
     void BurstDetected();
+    void CurrentTemp();
     static Log *GetInstance();
     bool_t UpdateWindTable();
     void PredictLanding(GPSData * landingPrediction);

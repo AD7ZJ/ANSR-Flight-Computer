@@ -77,6 +77,15 @@ void Log::BurstDetected()
     UART0::GetInstance()->Write(buffer);
 }
 
+void Log::CurrentTemp()
+{
+    int32_t tempF;
+    int8_t numBytes;
+    tempF = LM92::GetInstance()->ReadTempF();
+    numBytes = sprintf(buffer, "%0.2f degrees F\n", (float)tempF / 10);
+    sysLogger.Append(buffer, numBytes);
+}
+
 /**
  * Log the current GPS fix data set.
  * 
