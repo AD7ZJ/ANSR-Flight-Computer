@@ -406,8 +406,9 @@ void Log::NavSetDegFCoord (float lat, float lon, COORD *coord)
  */
 float Log::NavDescentRate (float alt)
 {
-    return -1E-18*alt*alt*alt*alt + 3E-13*alt*alt*alt - 8E-09*alt*alt + 0.0004*alt + 13.522;  // 4th order ANSR-13
+    return -1E-18*alt*alt*alt*alt + 3E-13*alt*alt*alt - 8E-09*alt*alt + 0.0004*alt + 20;  // 4th order ANSR-79
 
-//    return -5E-18*alt*alt*alt*alt + 9E-13*alt*alt*alt - 4E-08*alt*alt + 0.0010*alt + 9.3197; // 4th order ANSR-9
+//    return -1E-18*alt*alt*alt*alt + 3E-13*alt*alt*alt - 8E-09*alt*alt + 0.0004*alt + 13.522;  // 4th order ANSR-13
+//    return -5E-18*alt*alt*alt*alt + 9E-13*alt*alt*alt - 4E-08*alt*alt + 0.0010*alt + 9.3197;  // 4th order ANSR-9
 //    return -1E-18*alt*alt*alt*alt + 4E-13*alt*alt*alt - 2E-08*alt*alt + 0.0012*alt + 6.0886;  // 4th order ANSR-8
 }
