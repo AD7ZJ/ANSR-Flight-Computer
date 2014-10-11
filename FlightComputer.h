@@ -95,7 +95,7 @@ private:
     int32_t peakAltitude;
     
     /// Time since Epoch the GPS first reported a 3D fix.
-    uint32_t startGPSTime;
+    uint32_t gpsFixTime;
     
     /// System timer value to turn off GPS status tick LED.
     uint32_t statusLEDOffTick;

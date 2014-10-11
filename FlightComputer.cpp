@@ -87,7 +87,7 @@ FlightComputer *FlightComputer::GetInstance()
 FlightComputer::FlightComputer()
 {
     this->peakAltitude = 0;
-    this->startGPSTime = 0;
+    this->gpsFixTime = 0;
     this->statusLEDOffTick = 0;
 
     this->timer100msFlag = false;
@@ -112,10 +112,10 @@ void FlightComputer::StatusPacket(const GPSData *gps, char *text)
     char buffer[100];
 
     // Generate the GPRMC message.
-    if (this->startGPSTime == 0)
+    if (this->gpsFixTime == 0)
         strcpy (text, ">Balloon -:--:-- ");
     else {
-        time = gps->TimeSinceEpoch() - this->startGPSTime;
+        time = this->gpsFixTime;
 
         sprintf (text, ">Balloon %ld:%02ld:%02ld ", time / 3600, ((time / 60) % 60), time % 60);
     } // END if-else
@@ -155,6 +155,7 @@ void FlightComputer::ScheduleMessage()
 {
     char buffer[150];
     MICEncoder micEncoder;
+    RTCTime * time;
 
     // Check for new characters from the GPS engine
     this->gps->Update();
@@ -175,9 +176,9 @@ void FlightComputer::ScheduleMessage()
                 this->peakAltitude = gpsData->AltitudeFeet();
 
             // Record the starting time.
-            if (this->startGPSTime == 0)
+            if (this->gpsFixTime == 0)
             {
-                this->startGPSTime = gpsData->TimeSinceEpoch();
+                this->gpsFixTime = 1;
 
                 // set the real-time clock
                 RTC::GetInstance()->Set(gpsData);
@@ -186,8 +187,8 @@ void FlightComputer::ScheduleMessage()
             // update the wind data table
             Log::GetInstance()->UpdateWindTable();
 
-            // check for launch
-            if(!launchDetect) {
+            // check for launch.  GPS must have been locked for more than 5 mins
+            if(!launchDetect && gpsFixTime > 300) {
                 posAscentCount = posAscentCount << 1;
                 if(Log::GetInstance()->RawAscentRate() > 300)
                     posAscentCount |= 0x01;
@@ -206,15 +207,17 @@ void FlightComputer::ScheduleMessage()
         IOPorts::StatusLED(IOPorts::LEDGreen, true);
 
         if (gpsData->fixType == GPSData::NoFix)
-            this->statusLEDOffTick = SystemControl::GetTick() + 800;
+            this->statusLEDOffTick = SystemControl::GetTick() + 400;
         else {
-            this->statusLEDOffTick = SystemControl::GetTick() + 100;
+            this->statusLEDOffTick = SystemControl::GetTick() + 50;
+            time = RTC::GetInstance()->Get();
 
-            switch (gpsData->seconds)
+            switch (time->seconds)
             {
                 case 10:
                     StatusPacket (this->gps->Data(), buffer);
                     this->afsk->Transmit (buffer);
+                    UART0::GetInstance()->WriteLine (buffer);
                     break;
 
                 case 20:
@@ -299,7 +302,7 @@ void FlightComputer::Run()
 
     // UART 0 is the console serial port, UART 1 is the GPS engine.
     UART0::GetInstance()->Enable(UART0::BaudRate57600);
-    UART1::GetInstance()->Enable(UART1::BaudRate4800, UART1::Control8N1);
+    UART1::GetInstance()->Enable(UART1::BaudRate9600, UART1::Control8N1);
 
     // SPI 0 is the CMX867A MODEM.  SPI 1 is the SD card which is setup by the SDlogger class
     SPI0::GetInstance()->Enable();
@@ -369,6 +372,10 @@ void FlightComputer::Run()
             // 1 second tasks
             if(this->timer1sFlag) {
                 this->timer1sFlag = false;
+
+                if (this->gpsFixTime > 0) {
+                    this->gpsFixTime++;
+                }
             }
 
             // 10 second tasks
